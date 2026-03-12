@@ -22,6 +22,12 @@ export const Colors = {
   userBubble: '#6C5CE7',
   assistantBubble: '#F1F3F5',
 
+  // Auth screens theme (beige/gold)
+  authBackground: '#EDE8DF',
+  authGold: '#B8956A',
+  authGoldDark: '#A07D58',
+  authTitle: '#2C2C2C',
+
   categories: {
     travail: '#0984E3',
     personnel: '#6C5CE7',

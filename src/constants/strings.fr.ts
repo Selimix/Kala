@@ -1,6 +1,6 @@
 export const Strings = {
   app: {
-    name: 'Kala',
+    name: 'Kāla काल AI',
     tagline: 'Votre assistant intelligent d\'agenda',
   },
 
@@ -21,15 +21,15 @@ export const Strings = {
   },
 
   tabs: {
-    chat: 'Kala',
+    chat: 'Kāla',
     calendar: 'Agenda',
     settings: 'Réglages',
   },
 
   chat: {
     placeholder: 'Décrivez un événement...',
-    greeting: 'Bonjour ! Je suis Kala, votre assistant d\'agenda. Dites-moi ce que vous avez prévu et je m\'occupe du reste.',
-    thinking: 'Kala réfléchit...',
+    greeting: 'Bonjour ! Je suis Kāla, votre assistant d\'agenda. Dites-moi ce que vous avez prévu et je m\'occupe du reste.',
+    thinking: 'Kāla réfléchit...',
     error: 'Désolé, une erreur est survenue. Réessayez.',
     confirm: 'Confirmer',
     modify: 'Modifier',

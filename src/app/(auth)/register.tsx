@@ -8,6 +8,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  Image,
+  ScrollView,
 } from 'react-native';
 import { Link, router } from 'expo-router';
 import { signUp } from '../../services/auth';
@@ -57,76 +59,87 @@ export default function RegisterScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <View style={styles.content}>
-        <Text style={styles.title}>{Strings.app.name}</Text>
-        <Text style={styles.subtitle}>{Strings.auth.register}</Text>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.content}>
+          <View style={styles.header}>
+            <Image
+              source={require('../../../assets/kala-logo.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+            <Text style={styles.title}>{Strings.app.name}</Text>
+            <Text style={styles.subtitle}>{Strings.auth.register}</Text>
+          </View>
 
-        <View style={styles.form}>
-          <TextInput
-            style={styles.input}
-            placeholder={Strings.auth.invitationCode}
-            placeholderTextColor={Colors.textLight}
-            value={invitationCode}
-            onChangeText={setInvitationCode}
-            autoCapitalize="characters"
-            autoCorrect={false}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder={Strings.auth.displayName}
-            placeholderTextColor={Colors.textLight}
-            value={displayName}
-            onChangeText={setDisplayName}
-            autoCapitalize="words"
-            textContentType="name"
-          />
-          <TextInput
-            style={styles.input}
-            placeholder={Strings.auth.email}
-            placeholderTextColor={Colors.textLight}
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
-            textContentType="emailAddress"
-          />
-          <TextInput
-            style={styles.input}
-            placeholder={Strings.auth.password}
-            placeholderTextColor={Colors.textLight}
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            textContentType="newPassword"
-          />
-          <TextInput
-            style={styles.input}
-            placeholder={Strings.auth.confirmPassword}
-            placeholderTextColor={Colors.textLight}
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            secureTextEntry
-            textContentType="newPassword"
-          />
+          <View style={styles.form}>
+            <TextInput
+              style={styles.input}
+              placeholder={Strings.auth.invitationCode}
+              placeholderTextColor={Colors.textLight}
+              value={invitationCode}
+              onChangeText={setInvitationCode}
+              autoCapitalize="characters"
+              autoCorrect={false}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder={Strings.auth.displayName}
+              placeholderTextColor={Colors.textLight}
+              value={displayName}
+              onChangeText={setDisplayName}
+              autoCapitalize="words"
+              textContentType="name"
+            />
+            <TextInput
+              style={styles.input}
+              placeholder={Strings.auth.email}
+              placeholderTextColor={Colors.textLight}
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              textContentType="emailAddress"
+            />
+            <TextInput
+              style={styles.input}
+              placeholder={Strings.auth.password}
+              placeholderTextColor={Colors.textLight}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              textContentType="newPassword"
+            />
+            <TextInput
+              style={styles.input}
+              placeholder={Strings.auth.confirmPassword}
+              placeholderTextColor={Colors.textLight}
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              secureTextEntry
+              textContentType="newPassword"
+            />
 
-          <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={handleRegister}
-            disabled={loading}
-          >
-            <Text style={styles.buttonText}>
-              {loading ? '...' : Strings.auth.register}
-            </Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.button, loading && styles.buttonDisabled]}
+              onPress={handleRegister}
+              disabled={loading}
+            >
+              <Text style={styles.buttonText}>
+                {loading ? '...' : Strings.auth.register}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <Link href="/(auth)/login" asChild>
+            <TouchableOpacity style={styles.linkContainer}>
+              <Text style={styles.linkText}>{Strings.auth.login}</Text>
+            </TouchableOpacity>
+          </Link>
         </View>
-
-        <Link href="/(auth)/login" asChild>
-          <TouchableOpacity style={styles.linkContainer}>
-            <Text style={styles.linkText}>{Strings.auth.hasAccount}</Text>
-            <Text style={styles.linkAction}> {Strings.auth.login}</Text>
-          </TouchableOpacity>
-        </Link>
-      </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
@@ -134,45 +147,64 @@ export default function RegisterScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.authBackground,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
   },
   content: {
     flex: 1,
     justifyContent: 'center',
-    paddingHorizontal: 32,
+    paddingHorizontal: 40,
+    paddingVertical: 40,
+  },
+  header: {
+    alignItems: 'center',
+    marginBottom: 32,
+  },
+  logo: {
+    width: 100,
+    height: 100,
+    marginBottom: 12,
   },
   title: {
-    fontSize: 48,
-    fontWeight: '700',
-    color: Colors.primary,
+    fontSize: 36,
+    fontWeight: 'bold',
+    color: Colors.authTitle,
     textAlign: 'center',
     marginBottom: 8,
+    letterSpacing: 0.5,
+    ...Platform.select({
+      ios: { fontFamily: 'AvenirNextCondensed-Bold' },
+      android: { fontFamily: 'sans-serif-condensed' },
+      web: { fontFamily: 'Arial Narrow, sans-serif' },
+    }),
   },
   subtitle: {
-    fontSize: 18,
+    fontSize: 15,
     color: Colors.textSecondary,
     textAlign: 'center',
-    marginBottom: 48,
   },
   form: {
-    gap: 16,
+    gap: 14,
   },
   input: {
     backgroundColor: Colors.surface,
-    borderRadius: 12,
+    borderRadius: 10,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
     color: Colors.text,
     borderWidth: 1,
-    borderColor: Colors.borderLight,
+    borderColor: Colors.border,
   },
   button: {
-    backgroundColor: Colors.primary,
-    borderRadius: 12,
-    paddingVertical: 16,
+    backgroundColor: Colors.authGold,
+    borderRadius: 10,
+    paddingVertical: 15,
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 4,
   },
   buttonDisabled: {
     opacity: 0.6,
@@ -183,17 +215,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   linkContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
+    alignItems: 'center',
     marginTop: 24,
   },
   linkText: {
-    color: Colors.textSecondary,
-    fontSize: 14,
-  },
-  linkAction: {
-    color: Colors.primary,
-    fontSize: 14,
-    fontWeight: '600',
+    color: Colors.authTitle,
+    fontSize: 15,
+    fontWeight: '500',
   },
 });

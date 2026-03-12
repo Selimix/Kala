@@ -14,7 +14,7 @@ if (Platform.OS !== 'web') {
 // Constants
 // ============================================================
 
-const KALA_CALENDAR_TITLE = 'Kala';
+const KALA_CALENDAR_TITLE = 'Kāla काल AI';
 const KALA_CALENDAR_COLOR = Colors.primary;
 const STORAGE_KEY_CALENDAR_ID = '@kala/native-calendar-id';
 const STORAGE_KEY_EVENT_MAP = '@kala/event-map';
@@ -93,7 +93,7 @@ async function getOrCreateKalaCalendar(): Promise<string> {
         name: KALA_CALENDAR_TITLE,
         type: 'LOCAL',
       },
-      ownerAccount: 'Kala',
+      ownerAccount: 'Kāla',
       accessLevel: Calendar.CalendarAccessLevel.OWNER,
     });
   }

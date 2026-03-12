@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Kala",
+    "name": "Kāla काल AI",
     "slug": "kala",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -16,7 +16,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.kala.app",
       "infoPlist": {
-        "NSCalendarsUsageDescription": "Kala a besoin d'accéder à votre calendrier pour y synchroniser vos événements."
+        "NSCalendarsUsageDescription": "Kāla a besoin d'accéder à votre calendrier pour y synchroniser vos événements."
       }
     },
     "android": {
@@ -48,7 +48,7 @@
       [
         "expo-calendar",
         {
-          "calendarPermission": "Kala a besoin d'accéder à votre calendrier pour y synchroniser vos événements."
+          "calendarPermission": "Kāla a besoin d'accéder à votre calendrier pour y synchroniser vos événements."
         }
       ]
     ],

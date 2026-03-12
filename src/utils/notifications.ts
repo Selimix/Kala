@@ -49,7 +49,7 @@ export async function scheduleMorningCheckin(hour: number, minute: number) {
     identifier: 'morning-checkin',
     content: {
       title: 'Bonjour ! ☀️',
-      body: 'Voici votre programme pour aujourd\'hui. Ouvrez Kala pour voir votre agenda.',
+      body: 'Voici votre programme pour aujourd\'hui. Ouvrez Kāla pour voir votre agenda.',
       data: { type: 'morning-checkin' },
       ...(Platform.OS === 'android' && { channelId: 'checkins' }),
     },

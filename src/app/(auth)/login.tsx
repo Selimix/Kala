@@ -8,6 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  Image,
 } from 'react-native';
 import { Link, router } from 'expo-router';
 import { signIn } from '../../services/auth';
@@ -42,8 +43,15 @@ export default function LoginScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={styles.content}>
-        <Text style={styles.title}>{Strings.app.name}</Text>
-        <Text style={styles.subtitle}>{Strings.app.tagline}</Text>
+        <View style={styles.header}>
+          <Image
+            source={require('../../../assets/kala-logo.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+          <Text style={styles.title}>{Strings.app.name}</Text>
+          <Text style={styles.subtitle}>{Strings.app.tagline}</Text>
+        </View>
 
         <View style={styles.form}>
           <TextInput
@@ -79,8 +87,7 @@ export default function LoginScreen() {
 
         <Link href="/(auth)/register" asChild>
           <TouchableOpacity style={styles.linkContainer}>
-            <Text style={styles.linkText}>{Strings.auth.noAccount}</Text>
-            <Text style={styles.linkAction}> {Strings.auth.register}</Text>
+            <Text style={styles.linkText}>{Strings.auth.register}</Text>
           </TouchableOpacity>
         </Link>
       </View>
@@ -91,45 +98,59 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.authBackground,
   },
   content: {
     flex: 1,
     justifyContent: 'center',
-    paddingHorizontal: 32,
+    paddingHorizontal: 40,
+  },
+  header: {
+    alignItems: 'center',
+    marginBottom: 40,
+  },
+  logo: {
+    width: 120,
+    height: 120,
+    marginBottom: 16,
   },
   title: {
-    fontSize: 48,
-    fontWeight: '700',
-    color: Colors.primary,
+    fontSize: 36,
+    fontWeight: 'bold',
+    color: Colors.authTitle,
     textAlign: 'center',
     marginBottom: 8,
+    letterSpacing: 0.5,
+    ...Platform.select({
+      ios: { fontFamily: 'AvenirNextCondensed-Bold' },
+      android: { fontFamily: 'sans-serif-condensed' },
+      web: { fontFamily: 'Arial Narrow, sans-serif' },
+    }),
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 15,
     color: Colors.textSecondary,
     textAlign: 'center',
-    marginBottom: 48,
   },
   form: {
-    gap: 16,
+    gap: 14,
   },
   input: {
     backgroundColor: Colors.surface,
-    borderRadius: 12,
+    borderRadius: 10,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
     color: Colors.text,
     borderWidth: 1,
-    borderColor: Colors.borderLight,
+    borderColor: Colors.border,
   },
   button: {
-    backgroundColor: Colors.primary,
-    borderRadius: 12,
-    paddingVertical: 16,
+    backgroundColor: Colors.authGold,
+    borderRadius: 10,
+    paddingVertical: 15,
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 4,
   },
   buttonDisabled: {
     opacity: 0.6,
@@ -140,17 +161,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   linkContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
+    alignItems: 'center',
     marginTop: 24,
   },
   linkText: {
-    color: Colors.textSecondary,
-    fontSize: 14,
-  },
-  linkAction: {
-    color: Colors.primary,
-    fontSize: 14,
-    fontWeight: '600',
+    color: Colors.authTitle,
+    fontSize: 15,
+    fontWeight: '500',
   },
 });

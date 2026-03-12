@@ -2,17 +2,22 @@ import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
 // Configuration du comportement des notifications en foreground
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
+// (expo-notifications n'est pas disponible sur le web)
+if (Platform.OS !== 'web') {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+      shouldShowBanner: true,
+      shouldShowList: true,
+    }),
+  });
+}
 
 export async function requestNotificationPermissions(): Promise<boolean> {
+  if (Platform.OS === 'web') return false;
+
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
   let finalStatus = existingStatus;
 
@@ -81,6 +86,7 @@ export async function cancelNotificationsByIdentifier(identifier: string) {
 }
 
 export async function cancelAllNotifications() {
+  if (Platform.OS === 'web') return;
   await Notifications.cancelAllScheduledNotificationsAsync();
 }
 

@@ -16,6 +16,8 @@ export const Strings = {
     loginError: 'Email ou mot de passe incorrect',
     registerError: 'Erreur lors de la création du compte',
     passwordMismatch: 'Les mots de passe ne correspondent pas',
+    invitationCode: 'Code d\'invitation',
+    invalidInvitationCode: 'Code d\'invitation invalide',
   },
 
   tabs: {

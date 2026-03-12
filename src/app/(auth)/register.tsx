@@ -14,15 +14,23 @@ import { signUp } from '../../services/auth';
 import { Colors } from '../../constants/colors';
 import { Strings } from '../../constants/strings.fr';
 
+const VALID_INVITATION_CODES = ['KALA2026', 'BETA-KALA'];
+
 export default function RegisterScreen() {
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [invitationCode, setInvitationCode] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleRegister = async () => {
-    if (!displayName || !email || !password || !confirmPassword) return;
+    if (!displayName || !email || !password || !confirmPassword || !invitationCode) return;
+
+    if (!VALID_INVITATION_CODES.includes(invitationCode.trim().toUpperCase())) {
+      Alert.alert('Erreur', Strings.auth.invalidInvitationCode);
+      return;
+    }
 
     if (password !== confirmPassword) {
       Alert.alert('Erreur', Strings.auth.passwordMismatch);
@@ -54,6 +62,15 @@ export default function RegisterScreen() {
         <Text style={styles.subtitle}>{Strings.auth.register}</Text>
 
         <View style={styles.form}>
+          <TextInput
+            style={styles.input}
+            placeholder={Strings.auth.invitationCode}
+            placeholderTextColor={Colors.textLight}
+            value={invitationCode}
+            onChangeText={setInvitationCode}
+            autoCapitalize="characters"
+            autoCorrect={false}
+          />
           <TextInput
             style={styles.input}
             placeholder={Strings.auth.displayName}

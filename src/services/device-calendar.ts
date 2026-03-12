@@ -1,8 +1,14 @@
-import * as Calendar from 'expo-calendar';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { CalendarEvent } from '../types/events';
 import { Colors } from '../constants/colors';
+
+// Import conditionnel — expo-calendar n'est pas disponible sur le web
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let Calendar: any = null;
+if (Platform.OS !== 'web') {
+  Calendar = require('expo-calendar');
+}
 
 // ============================================================
 // Constants
@@ -32,11 +38,13 @@ interface EventSyncMap {
 // ============================================================
 
 export async function requestCalendarPermission(): Promise<boolean> {
+  if (Platform.OS === 'web' || !Calendar) return false;
   const { status } = await Calendar.requestCalendarPermissionsAsync();
   return status === 'granted';
 }
 
 export async function checkCalendarPermission(): Promise<boolean> {
+  if (Platform.OS === 'web' || !Calendar) return false;
   const { status } = await Calendar.getCalendarPermissionsAsync();
   return status === 'granted';
 }
@@ -53,7 +61,7 @@ async function getOrCreateKalaCalendar(): Promise<string> {
     // Verify it still exists
     try {
       const calendars = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
-      const exists = calendars.find((c) => c.id === storedId);
+      const exists = calendars.find((c: any) => c.id === storedId);
       if (exists) return storedId;
     } catch {
       // Calendar no longer exists, we'll create a new one
@@ -83,7 +91,7 @@ async function getOrCreateKalaCalendar(): Promise<string> {
       source: {
         isLocalAccount: true,
         name: KALA_CALENDAR_TITLE,
-        type: 'LOCAL' as Calendar.SourceType,
+        type: 'LOCAL',
       },
       ownerAccount: 'Kala',
       accessLevel: Calendar.CalendarAccessLevel.OWNER,
@@ -181,6 +189,9 @@ async function deleteNativeEvent(nativeEventId: string): Promise<void> {
 // ============================================================
 
 export async function syncEvents(events: CalendarEvent[]): Promise<void> {
+  // expo-calendar n'est pas disponible sur le web
+  if (Platform.OS === 'web' || !Calendar) return;
+
   // Check if sync is enabled
   const enabled = await isSyncEnabled();
   if (!enabled) return;
@@ -269,12 +280,14 @@ export async function setSyncEnabled(enabled: boolean): Promise<void> {
 export async function clearSyncData(): Promise<void> {
   try {
     // Optionally delete the Kala calendar from the device
-    const storedId = await AsyncStorage.getItem(STORAGE_KEY_CALENDAR_ID);
-    if (storedId) {
-      try {
-        await Calendar.deleteCalendarAsync(storedId);
-      } catch {
-        // Calendar might already be deleted
+    if (Platform.OS !== 'web' && Calendar) {
+      const storedId = await AsyncStorage.getItem(STORAGE_KEY_CALENDAR_ID);
+      if (storedId) {
+        try {
+          await Calendar.deleteCalendarAsync(storedId);
+        } catch {
+          // Calendar might already be deleted
+        }
       }
     }
   } finally {

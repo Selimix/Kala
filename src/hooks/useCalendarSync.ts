@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { AppState, type AppStateStatus } from 'react-native';
+import { AppState, Platform, type AppStateStatus } from 'react-native';
 import { supabase } from '../services/supabase';
 import { getEventsForRange } from '../services/events';
 import {
@@ -18,6 +18,9 @@ export function useCalendarSync() {
   const permissionGranted = useRef(false);
 
   const performSync = useCallback(async () => {
+    // expo-calendar n'est pas disponible sur le web
+    if (Platform.OS === 'web') return;
+
     // Prevent concurrent syncs
     if (isSyncing.current) return;
 
@@ -59,6 +62,8 @@ export function useCalendarSync() {
 
   // Sync when Realtime fires (any change to events table)
   useEffect(() => {
+    if (Platform.OS === 'web') return;
+
     const channel = supabase
       .channel('calendar-sync-realtime')
       .on(
@@ -77,6 +82,8 @@ export function useCalendarSync() {
 
   // Sync when app returns to foreground
   useEffect(() => {
+    if (Platform.OS === 'web') return;
+
     const handleAppState = (state: AppStateStatus) => {
       if (state === 'active') {
         performSync();

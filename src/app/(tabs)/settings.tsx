@@ -1,10 +1,12 @@
-import { View, Text, TouchableOpacity, Switch, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, Switch, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { signOut } from '../../services/auth';
 import { useAuth } from '../../hooks/useAuth';
 import { Colors } from '../../constants/colors';
 import { Strings } from '../../constants/strings.fr';
+import { AI_PROVIDERS, type AIProvider } from '../../constants/providers';
 
 export default function SettingsScreen() {
   const { profile, updateProfile } = useAuth();
@@ -18,9 +20,15 @@ export default function SettingsScreen() {
     await updateProfile({ notifications_enabled: value });
   };
 
+  const selectProvider = async (provider: AIProvider) => {
+    await updateProfile({ ai_provider: provider });
+  };
+
+  const currentProvider = profile?.ai_provider || 'claude';
+
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
-      <View style={styles.content}>
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{Strings.settings.profile}</Text>
           <View style={styles.card}>
@@ -32,6 +40,34 @@ export default function SettingsScreen() {
             <Text style={styles.displayName}>
               {profile?.display_name || 'Utilisateur'}
             </Text>
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>{Strings.settings.aiProvider}</Text>
+          <View style={styles.card}>
+            {(Object.entries(AI_PROVIDERS) as [AIProvider, typeof AI_PROVIDERS[AIProvider]][]).map(
+              ([key, provider], index) => (
+                <View key={key}>
+                  {index > 0 && <View style={styles.divider} />}
+                  <TouchableOpacity
+                    style={styles.providerRow}
+                    onPress={() => selectProvider(key)}
+                  >
+                    <View style={styles.providerInfo}>
+                      <View style={[styles.providerDot, { backgroundColor: provider.color }]} />
+                      <View>
+                        <Text style={styles.providerName}>{provider.label}</Text>
+                        <Text style={styles.providerDesc}>{provider.description}</Text>
+                      </View>
+                    </View>
+                    {currentProvider === key && (
+                      <Ionicons name="checkmark-circle" size={22} color={Colors.primary} />
+                    )}
+                  </TouchableOpacity>
+                </View>
+              )
+            )}
           </View>
         </View>
 
@@ -69,7 +105,8 @@ export default function SettingsScreen() {
         </TouchableOpacity>
 
         <Text style={styles.version}>{Strings.settings.version} 1.0.0</Text>
-      </View>
+        <View style={styles.bottomSpacer} />
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -124,6 +161,32 @@ const styles = StyleSheet.create({
     color: Colors.text,
     textAlign: 'center',
   },
+  providerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  providerInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  providerDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
+  providerName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text,
+  },
+  providerDesc: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    marginTop: 1,
+  },
   settingRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -163,5 +226,8 @@ const styles = StyleSheet.create({
     color: Colors.textLight,
     fontSize: 12,
     marginTop: 24,
+  },
+  bottomSpacer: {
+    height: 32,
   },
 });

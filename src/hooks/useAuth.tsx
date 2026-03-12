@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { supabase } from '../services/supabase';
 import type { Session } from '@supabase/supabase-js';
+import type { AIProvider } from '../constants/providers';
 
 interface Profile {
   id: string;
@@ -10,6 +11,7 @@ interface Profile {
   morning_checkin_time: string;
   evening_checkin_time: string;
   notifications_enabled: boolean;
+  ai_provider: AIProvider;
 }
 
 interface AuthContextType {

@@ -6,6 +6,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// ============================================================
+// System prompt (shared across all providers)
+// ============================================================
 const SYSTEM_PROMPT = (currentDatetime: string, userTimezone: string) => `Tu es Kala, un assistant intelligent de gestion d'agenda. Tu parles en français.
 
 Ton rôle:
@@ -29,11 +32,13 @@ Contexte temporel:
 - Date et heure actuelles: ${currentDatetime}
 - Fuseau horaire de l'utilisateur: ${userTimezone}`;
 
-const TOOLS = [
+// ============================================================
+// Tool definitions (shared format, adapted per provider)
+// ============================================================
+const TOOLS_ANTHROPIC = [
   {
     name: 'create_event',
-    description:
-      "Crée un nouvel événement dans l'agenda de l'utilisateur.",
+    description: "Crée un nouvel événement dans l'agenda de l'utilisateur.",
     input_schema: {
       type: 'object',
       properties: {
@@ -83,9 +88,7 @@ const TOOLS = [
     description: "Supprime un événement de l'agenda.",
     input_schema: {
       type: 'object',
-      properties: {
-        event_id: { type: 'string' },
-      },
+      properties: { event_id: { type: 'string' } },
       required: ['event_id'],
     },
   },
@@ -103,14 +106,300 @@ const TOOLS = [
   },
 ];
 
+// Convert Anthropic tool format to OpenAI function calling format
+function toOpenAITools() {
+  return TOOLS_ANTHROPIC.map(t => ({
+    type: 'function' as const,
+    function: {
+      name: t.name,
+      description: t.description,
+      parameters: t.input_schema,
+    },
+  }));
+}
+
+// ============================================================
+// Tool executor (shared across all providers)
+// ============================================================
+async function executeTool(
+  toolName: string,
+  toolInput: any,
+  supabaseUser: any,
+  userId: string
+): Promise<{ result: string; eventId?: string }> {
+  switch (toolName) {
+    case 'create_event': {
+      const { data, error } = await supabaseUser
+        .from('events')
+        .insert({
+          user_id: userId,
+          title: toolInput.title,
+          description: toolInput.description || null,
+          start_time: toolInput.start_time,
+          end_time: toolInput.end_time,
+          location: toolInput.location || null,
+          people: toolInput.people || [],
+          category: toolInput.category,
+          is_all_day: toolInput.is_all_day || false,
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      return { result: JSON.stringify({ success: true, event_id: data.id, event: data }), eventId: data.id };
+    }
+    case 'update_event': {
+      const { data, error } = await supabaseUser
+        .from('events')
+        .update({ ...toolInput.updates, updated_at: new Date().toISOString() })
+        .eq('id', toolInput.event_id)
+        .select()
+        .single();
+      if (error) throw error;
+      return { result: JSON.stringify({ success: true, event: data }), eventId: data.id };
+    }
+    case 'delete_event': {
+      const { error } = await supabaseUser
+        .from('events')
+        .delete()
+        .eq('id', toolInput.event_id);
+      if (error) throw error;
+      return { result: JSON.stringify({ success: true, deleted: toolInput.event_id }), eventId: toolInput.event_id };
+    }
+    case 'list_events': {
+      const { data, error } = await supabaseUser
+        .from('events')
+        .select('*')
+        .gte('start_time', toolInput.start_date)
+        .lte('start_time', toolInput.end_date)
+        .order('start_time', { ascending: true });
+      if (error) throw error;
+      return { result: JSON.stringify({ events: data || [] }) };
+    }
+    default:
+      return { result: JSON.stringify({ error: 'Outil inconnu' }) };
+  }
+}
+
+// ============================================================
+// Provider: Claude (Anthropic)
+// ============================================================
+async function callClaude(
+  messages: Array<{ role: string; content: any }>,
+  systemPrompt: string,
+  supabaseUser: any,
+  userId: string
+) {
+  const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
+  if (!apiKey) throw new Error('ANTHROPIC_API_KEY non configurée');
+
+  const anthropic = new Anthropic({ apiKey });
+  const eventsAffected: string[] = [];
+  const toolCalls: any[] = [];
+
+  let response = await anthropic.messages.create({
+    model: 'claude-sonnet-4-20250514',
+    max_tokens: 1024,
+    system: systemPrompt,
+    tools: TOOLS_ANTHROPIC as any,
+    messages: messages as any,
+  });
+
+  while (response.stop_reason === 'tool_use') {
+    const toolUseBlocks = response.content.filter((b: any) => b.type === 'tool_use');
+    const toolResults: any[] = [];
+
+    for (const toolUse of toolUseBlocks) {
+      toolCalls.push({ id: toolUse.id, name: toolUse.name, input: toolUse.input });
+      try {
+        const { result, eventId } = await executeTool(toolUse.name, toolUse.input, supabaseUser, userId);
+        if (eventId) eventsAffected.push(eventId);
+        toolResults.push({ type: 'tool_result', tool_use_id: toolUse.id, content: result });
+      } catch (err: any) {
+        toolResults.push({ type: 'tool_result', tool_use_id: toolUse.id, content: JSON.stringify({ error: err.message }) });
+      }
+    }
+
+    messages.push({ role: 'assistant', content: response.content });
+    messages.push({ role: 'user', content: toolResults });
+
+    response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1024,
+      system: systemPrompt,
+      tools: TOOLS_ANTHROPIC as any,
+      messages: messages as any,
+    });
+  }
+
+  const textBlocks = response.content.filter((b: any) => b.type === 'text');
+  const assistantMessage = textBlocks.map((b: any) => b.text).join('\n');
+
+  return { assistantMessage, toolCalls, eventsAffected };
+}
+
+// ============================================================
+// Provider: OpenAI (ChatGPT)
+// ============================================================
+async function callOpenAI(
+  messages: Array<{ role: string; content: any }>,
+  systemPrompt: string,
+  supabaseUser: any,
+  userId: string
+) {
+  const apiKey = Deno.env.get('OPENAI_API_KEY');
+  if (!apiKey) throw new Error('OPENAI_API_KEY non configurée');
+
+  const eventsAffected: string[] = [];
+  const toolCalls: any[] = [];
+
+  const openaiMessages: any[] = [
+    { role: 'system', content: systemPrompt },
+    ...messages.map(m => ({ role: m.role, content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content) })),
+  ];
+
+  let response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({
+      model: 'gpt-4o',
+      max_tokens: 1024,
+      messages: openaiMessages,
+      tools: toOpenAITools(),
+    }),
+  });
+
+  let data = await response.json();
+
+  while (data.choices?.[0]?.finish_reason === 'tool_calls') {
+    const assistantMsg = data.choices[0].message;
+    openaiMessages.push(assistantMsg);
+
+    for (const tc of assistantMsg.tool_calls || []) {
+      const fnName = tc.function.name;
+      const fnArgs = JSON.parse(tc.function.arguments);
+      toolCalls.push({ id: tc.id, name: fnName, input: fnArgs });
+
+      try {
+        const { result, eventId } = await executeTool(fnName, fnArgs, supabaseUser, userId);
+        if (eventId) eventsAffected.push(eventId);
+        openaiMessages.push({ role: 'tool', tool_call_id: tc.id, content: result });
+      } catch (err: any) {
+        openaiMessages.push({ role: 'tool', tool_call_id: tc.id, content: JSON.stringify({ error: err.message }) });
+      }
+    }
+
+    response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: 'gpt-4o',
+        max_tokens: 1024,
+        messages: openaiMessages,
+        tools: toOpenAITools(),
+      }),
+    });
+    data = await response.json();
+  }
+
+  const assistantMessage = data.choices?.[0]?.message?.content || 'Désolé, je n\'ai pas pu répondre.';
+  return { assistantMessage, toolCalls, eventsAffected };
+}
+
+// ============================================================
+// Provider: Gemini (Google)
+// ============================================================
+async function callGemini(
+  messages: Array<{ role: string; content: any }>,
+  systemPrompt: string,
+  supabaseUser: any,
+  userId: string
+) {
+  const apiKey = Deno.env.get('GEMINI_API_KEY');
+  if (!apiKey) throw new Error('GEMINI_API_KEY non configurée');
+
+  const eventsAffected: string[] = [];
+  const toolCalls: any[] = [];
+
+  const geminiContents = messages.map(m => ({
+    role: m.role === 'assistant' ? 'model' : 'user',
+    parts: [{ text: typeof m.content === 'string' ? m.content : JSON.stringify(m.content) }],
+  }));
+
+  const geminiTools = [{
+    functionDeclarations: TOOLS_ANTHROPIC.map(t => ({
+      name: t.name,
+      description: t.description,
+      parameters: t.input_schema,
+    })),
+  }];
+
+  let response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: systemPrompt }] },
+        contents: geminiContents,
+        tools: geminiTools,
+      }),
+    }
+  );
+
+  let data = await response.json();
+  let candidate = data.candidates?.[0];
+
+  while (candidate?.content?.parts?.some((p: any) => p.functionCall)) {
+    const functionCallParts = candidate.content.parts.filter((p: any) => p.functionCall);
+    geminiContents.push({ role: 'model', parts: candidate.content.parts });
+
+    const functionResponses: any[] = [];
+    for (const part of functionCallParts) {
+      const fnCall = part.functionCall;
+      toolCalls.push({ id: fnCall.name, name: fnCall.name, input: fnCall.args });
+
+      try {
+        const { result, eventId } = await executeTool(fnCall.name, fnCall.args, supabaseUser, userId);
+        if (eventId) eventsAffected.push(eventId);
+        functionResponses.push({ functionResponse: { name: fnCall.name, response: JSON.parse(result) } });
+      } catch (err: any) {
+        functionResponses.push({ functionResponse: { name: fnCall.name, response: { error: err.message } } });
+      }
+    }
+
+    geminiContents.push({ role: 'user', parts: functionResponses });
+
+    response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          contents: geminiContents,
+          tools: geminiTools,
+        }),
+      }
+    );
+    data = await response.json();
+    candidate = data.candidates?.[0];
+  }
+
+  const textParts = candidate?.content?.parts?.filter((p: any) => p.text) || [];
+  const assistantMessage = textParts.map((p: any) => p.text).join('\n') || 'Désolé, je n\'ai pas pu répondre.';
+
+  return { assistantMessage, toolCalls, eventsAffected };
+}
+
+// ============================================================
+// Main handler
+// ============================================================
 Deno.serve(async (req: Request) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    // 1. Auth: get user from JWT
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return new Response(JSON.stringify({ error: 'Non autorisé' }), {
@@ -120,18 +409,10 @@ Deno.serve(async (req: Request) => {
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const anthropicApiKey = Deno.env.get('ANTHROPIC_API_KEY')!;
-
-    // Client with user's JWT for RLS
     const supabaseUser = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!, {
       global: { headers: { Authorization: authHeader } },
     });
 
-    // Service client for admin operations
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
-
-    // Get user
     const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
     if (userError || !user) {
       return new Response(JSON.stringify({ error: 'Non autorisé' }), {
@@ -140,7 +421,6 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // 2. Parse request
     const { conversation_id, user_message } = await req.json();
     if (!conversation_id || !user_message) {
       return new Response(JSON.stringify({ error: 'Paramètres manquants' }), {
@@ -149,17 +429,19 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // 3. Get user profile for timezone
+    // Get user profile (timezone + AI provider)
     const { data: profile } = await supabaseUser
       .from('profiles')
-      .select('timezone')
+      .select('timezone, ai_provider')
       .eq('id', user.id)
       .single();
 
     const timezone = profile?.timezone || 'Europe/Paris';
+    const aiProvider = profile?.ai_provider || 'claude';
     const currentDatetime = new Date().toLocaleString('fr-FR', { timeZone: timezone });
+    const systemPrompt = SYSTEM_PROMPT(currentDatetime, timezone);
 
-    // 4. Load conversation history (last 20 messages)
+    // Load conversation history
     const { data: history } = await supabaseUser
       .from('messages')
       .select('role, content')
@@ -167,7 +449,7 @@ Deno.serve(async (req: Request) => {
       .order('created_at', { ascending: true })
       .limit(20);
 
-    // 5. Save user message
+    // Save user message
     await supabaseUser.from('messages').insert({
       conversation_id,
       user_id: user.id,
@@ -175,185 +457,62 @@ Deno.serve(async (req: Request) => {
       content: user_message,
     });
 
-    // 6. Build Claude messages
-    const claudeMessages: Array<{ role: string; content: any }> = [];
-
+    // Build messages
+    const messages: Array<{ role: string; content: any }> = [];
     if (history) {
       for (const msg of history) {
-        claudeMessages.push({ role: msg.role, content: msg.content });
+        messages.push({ role: msg.role, content: msg.content });
       }
     }
-    claudeMessages.push({ role: 'user', content: user_message });
+    messages.push({ role: 'user', content: user_message });
 
-    // 7. Call Claude API with tool loop
-    const anthropic = new Anthropic({ apiKey: anthropicApiKey });
+    // Call the selected AI provider
+    let result: { assistantMessage: string; toolCalls: any[]; eventsAffected: string[] };
 
-    let response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1024,
-      system: SYSTEM_PROMPT(currentDatetime, timezone),
-      tools: TOOLS as any,
-      messages: claudeMessages as any,
-    });
-
-    const eventsAffected: string[] = [];
-    let toolCalls: any[] = [];
-
-    // Tool execution loop
-    while (response.stop_reason === 'tool_use') {
-      const toolUseBlocks = response.content.filter(
-        (block: any) => block.type === 'tool_use'
-      );
-
-      const toolResults: any[] = [];
-
-      for (const toolUse of toolUseBlocks) {
-        toolCalls.push({
-          id: toolUse.id,
-          name: toolUse.name,
-          input: toolUse.input,
-        });
-
-        let result: string;
-
-        try {
-          switch (toolUse.name) {
-            case 'create_event': {
-              const input = toolUse.input as any;
-              const { data, error } = await supabaseUser
-                .from('events')
-                .insert({
-                  user_id: user.id,
-                  title: input.title,
-                  description: input.description || null,
-                  start_time: input.start_time,
-                  end_time: input.end_time,
-                  location: input.location || null,
-                  people: input.people || [],
-                  category: input.category,
-                  is_all_day: input.is_all_day || false,
-                })
-                .select()
-                .single();
-
-              if (error) throw error;
-              eventsAffected.push(data.id);
-              result = JSON.stringify({ success: true, event_id: data.id, event: data });
-              break;
-            }
-
-            case 'update_event': {
-              const input = toolUse.input as any;
-              const { data, error } = await supabaseUser
-                .from('events')
-                .update({ ...input.updates, updated_at: new Date().toISOString() })
-                .eq('id', input.event_id)
-                .select()
-                .single();
-
-              if (error) throw error;
-              eventsAffected.push(data.id);
-              result = JSON.stringify({ success: true, event: data });
-              break;
-            }
-
-            case 'delete_event': {
-              const input = toolUse.input as any;
-              const { error } = await supabaseUser
-                .from('events')
-                .delete()
-                .eq('id', input.event_id);
-
-              if (error) throw error;
-              eventsAffected.push(input.event_id);
-              result = JSON.stringify({ success: true, deleted: input.event_id });
-              break;
-            }
-
-            case 'list_events': {
-              const input = toolUse.input as any;
-              const { data, error } = await supabaseUser
-                .from('events')
-                .select('*')
-                .gte('start_time', input.start_date)
-                .lte('start_time', input.end_date)
-                .order('start_time', { ascending: true });
-
-              if (error) throw error;
-              result = JSON.stringify({ events: data || [] });
-              break;
-            }
-
-            default:
-              result = JSON.stringify({ error: 'Outil inconnu' });
-          }
-        } catch (err: any) {
-          result = JSON.stringify({ error: err.message });
-        }
-
-        toolResults.push({
-          type: 'tool_result',
-          tool_use_id: toolUse.id,
-          content: result,
-        });
-      }
-
-      // Continue conversation with tool results
-      claudeMessages.push({ role: 'assistant', content: response.content });
-      claudeMessages.push({ role: 'user', content: toolResults });
-
-      response = await anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1024,
-        system: SYSTEM_PROMPT(currentDatetime, timezone),
-        tools: TOOLS as any,
-        messages: claudeMessages as any,
-      });
+    switch (aiProvider) {
+      case 'openai':
+        result = await callOpenAI(messages, systemPrompt, supabaseUser, user.id);
+        break;
+      case 'gemini':
+        result = await callGemini(messages, systemPrompt, supabaseUser, user.id);
+        break;
+      case 'claude':
+      default:
+        result = await callClaude(messages, systemPrompt, supabaseUser, user.id);
+        break;
     }
 
-    // 8. Extract final text response
-    const textBlocks = response.content.filter(
-      (block: any) => block.type === 'text'
-    );
-    const assistantMessage = textBlocks.map((b: any) => b.text).join('\n');
-
-    // 9. Save assistant message
+    // Save assistant message
     const { data: savedMessage } = await supabaseUser.from('messages').insert({
       conversation_id,
       user_id: user.id,
       role: 'assistant',
-      content: assistantMessage,
-      tool_calls: toolCalls.length > 0 ? toolCalls : null,
-      event_id: eventsAffected[0] || null,
+      content: result.assistantMessage,
+      tool_calls: result.toolCalls.length > 0 ? result.toolCalls : null,
+      event_id: result.eventsAffected[0] || null,
     }).select().single();
 
-    // 10. Update conversation timestamp
+    // Update conversation timestamp
     await supabaseUser
       .from('conversations')
       .update({ updated_at: new Date().toISOString() })
       .eq('id', conversation_id);
 
-    // 11. Return response
     return new Response(
       JSON.stringify({
-        assistant_message: assistantMessage,
-        tool_calls: toolCalls.length > 0 ? toolCalls : null,
-        events_affected: eventsAffected,
+        assistant_message: result.assistantMessage,
+        tool_calls: result.toolCalls.length > 0 ? result.toolCalls : null,
+        events_affected: result.eventsAffected,
         conversation_id,
         message_id: savedMessage?.id || '',
       }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (err: any) {
     console.error('Edge Function error:', err);
     return new Response(
       JSON.stringify({ error: err.message || 'Erreur interne' }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });

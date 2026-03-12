@@ -43,6 +43,7 @@ export const Strings = {
   settings: {
     title: 'Réglages',
     profile: 'Profil',
+    aiProvider: 'Modèle IA',
     notifications: 'Notifications',
     morningCheckin: 'Rappel du matin',
     eveningCheckin: 'Rappel du soir',

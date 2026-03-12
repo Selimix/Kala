@@ -2,6 +2,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
 import { CATEGORIES } from '../../constants/categories';
+import { formatEventTime } from '../../utils/date';
 import type { CalendarEvent } from '../../types/events';
 
 interface Props {
@@ -11,23 +12,15 @@ interface Props {
 export function EventCard({ event }: Props) {
   const category = CATEGORIES[event.category];
 
-  const formatTime = (isoString: string) => {
-    const date = new Date(isoString);
-    return date.toLocaleTimeString('fr-FR', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
   return (
     <View style={[styles.card, { borderLeftColor: category.color }]}>
       <View style={styles.timeContainer}>
         <Text style={styles.time}>
-          {event.is_all_day ? 'Journée' : formatTime(event.start_time)}
+          {event.is_all_day ? 'Journée' : formatEventTime(event.start_time)}
         </Text>
         {!event.is_all_day && (
           <Text style={styles.timeSeparator}>
-            {formatTime(event.end_time)}
+            {formatEventTime(event.end_time)}
           </Text>
         )}
       </View>

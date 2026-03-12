@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, Switch, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { signOut } from '../../services/auth';
@@ -7,11 +7,15 @@ import { Colors } from '../../constants/colors';
 import { Strings } from '../../constants/strings.fr';
 
 export default function SettingsScreen() {
-  const { profile } = useAuth();
+  const { profile, updateProfile } = useAuth();
 
   const handleLogout = async () => {
     await signOut();
     router.replace('/(auth)/login');
+  };
+
+  const toggleNotifications = async (value: boolean) => {
+    await updateProfile({ notifications_enabled: value });
   };
 
   return (
@@ -34,6 +38,16 @@ export default function SettingsScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{Strings.settings.notifications}</Text>
           <View style={styles.card}>
+            <View style={styles.settingRow}>
+              <Text style={styles.settingLabel}>{Strings.settings.notifications}</Text>
+              <Switch
+                value={profile?.notifications_enabled ?? true}
+                onValueChange={toggleNotifications}
+                trackColor={{ false: Colors.borderLight, true: Colors.primaryLight }}
+                thumbColor={profile?.notifications_enabled ? Colors.primary : Colors.textLight}
+              />
+            </View>
+            <View style={styles.divider} />
             <View style={styles.settingRow}>
               <Text style={styles.settingLabel}>{Strings.settings.morningCheckin}</Text>
               <Text style={styles.settingValue}>

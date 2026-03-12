@@ -16,12 +16,14 @@ interface AuthContextType {
   session: Session | null;
   profile: Profile | null;
   loading: boolean;
+  updateProfile: (updates: Partial<Profile>) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   session: null,
   profile: null,
   loading: true,
+  updateProfile: async () => {},
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -61,8 +63,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (data) setProfile(data);
   }
 
+  async function updateProfile(updates: Partial<Profile>) {
+    if (!session?.user) return;
+    const { data, error } = await supabase
+      .from('profiles')
+      .update(updates)
+      .eq('id', session.user.id)
+      .select()
+      .single();
+    if (!error && data) setProfile(data);
+  }
+
   return (
-    <AuthContext.Provider value={{ session, profile, loading }}>
+    <AuthContext.Provider value={{ session, profile, loading, updateProfile }}>
       {children}
     </AuthContext.Provider>
   );

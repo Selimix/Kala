@@ -2,6 +2,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
 import { CATEGORIES, type EventCategory } from '../../constants/categories';
+import { formatEventDateTime } from '../../utils/date';
 import type { ToolCall } from '../../types/chat';
 
 interface Props {
@@ -20,18 +21,6 @@ export function EventConfirmationCard({ toolCall }: Props) {
 
   const category = CATEGORIES[input.category || 'autre'];
 
-  const formatTime = (isoString?: string) => {
-    if (!isoString) return '';
-    const date = new Date(isoString);
-    return date.toLocaleString('fr-FR', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
   return (
     <View style={[styles.card, { borderLeftColor: category.color }]}>
       <View style={styles.header}>
@@ -43,7 +32,9 @@ export function EventConfirmationCard({ toolCall }: Props) {
 
       <View style={styles.detail}>
         <Ionicons name="time-outline" size={14} color={Colors.textSecondary} />
-        <Text style={styles.detailText}>{formatTime(input.start_time)}</Text>
+        <Text style={styles.detailText}>
+          {input.start_time ? formatEventDateTime(input.start_time) : ''}
+        </Text>
       </View>
 
       {input.location && (

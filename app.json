@@ -35,6 +35,12 @@
         {
           "root": "./src/app"
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "sounds": []
+        }
       ]
     ],
     "experiments": {

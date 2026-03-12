@@ -47,6 +47,8 @@ export const Strings = {
     notifications: 'Notifications',
     morningCheckin: 'Rappel du matin',
     eveningCheckin: 'Rappel du soir',
+    calendarSync: 'Synchronisation calendrier',
+    calendarSyncDesc: 'Synchroniser avec le calendrier natif',
     logout: 'Se déconnecter',
     version: 'Version',
   },

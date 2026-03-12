@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Switch, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,17 +8,29 @@ import { useAuth } from '../../hooks/useAuth';
 import { Colors } from '../../constants/colors';
 import { Strings } from '../../constants/strings.fr';
 import { AI_PROVIDERS, type AIProvider } from '../../constants/providers';
+import { isSyncEnabled, setSyncEnabled, clearSyncData } from '../../services/device-calendar';
 
 export default function SettingsScreen() {
   const { profile, updateProfile } = useAuth();
+  const [calendarSyncEnabled, setCalendarSyncEnabled] = useState(true);
+
+  useEffect(() => {
+    isSyncEnabled().then(setCalendarSyncEnabled);
+  }, []);
 
   const handleLogout = async () => {
+    await clearSyncData();
     await signOut();
     router.replace('/(auth)/login');
   };
 
   const toggleNotifications = async (value: boolean) => {
     await updateProfile({ notifications_enabled: value });
+  };
+
+  const toggleCalendarSync = async (value: boolean) => {
+    await setSyncEnabled(value);
+    setCalendarSyncEnabled(value);
   };
 
   const selectProvider = async (provider: AIProvider) => {
@@ -96,6 +109,23 @@ export default function SettingsScreen() {
               <Text style={styles.settingValue}>
                 {profile?.evening_checkin_time || '20:00'}
               </Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>{Strings.settings.calendarSync}</Text>
+          <View style={styles.card}>
+            <View style={styles.settingRow}>
+              <View style={styles.syncInfo}>
+                <Text style={styles.settingLabel}>{Strings.settings.calendarSyncDesc}</Text>
+              </View>
+              <Switch
+                value={calendarSyncEnabled}
+                onValueChange={toggleCalendarSync}
+                trackColor={{ false: Colors.borderLight, true: Colors.primaryLight }}
+                thumbColor={calendarSyncEnabled ? Colors.primary : Colors.textLight}
+              />
             </View>
           </View>
         </View>
@@ -192,6 +222,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 4,
+  },
+  syncInfo: {
+    flex: 1,
+    marginRight: 12,
   },
   settingLabel: {
     fontSize: 16,

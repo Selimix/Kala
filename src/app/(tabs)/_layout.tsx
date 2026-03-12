@@ -3,9 +3,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
 import { Strings } from '../../constants/strings.fr';
 import { useNotifications } from '../../hooks/useNotifications';
+import { useCalendarSync } from '../../hooks/useCalendarSync';
 
 export default function TabsLayout() {
   useNotifications();
+  useCalendarSync();
 
   return (
     <Tabs

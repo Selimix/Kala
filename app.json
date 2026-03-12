@@ -14,7 +14,10 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.kala.app"
+      "bundleIdentifier": "com.kala.app",
+      "infoPlist": {
+        "NSCalendarsUsageDescription": "Kala a besoin d'accéder à votre calendrier pour y synchroniser vos événements."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -40,6 +43,12 @@
         "expo-notifications",
         {
           "sounds": []
+        }
+      ],
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "Kala a besoin d'accéder à votre calendrier pour y synchroniser vos événements."
         }
       ]
     ],

@@ -53,7 +53,7 @@ create type event_category as enum (
 );
 
 create table public.events (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.profiles(id) on delete cascade,
   title text not null,
   description text,
@@ -94,7 +94,7 @@ create index idx_events_user_time on public.events (user_id, start_time);
 -- CONVERSATIONS
 -- ============================================================
 create table public.conversations (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.profiles(id) on delete cascade,
   title text,
   created_at timestamptz not null default now(),
@@ -121,7 +121,7 @@ create policy "Users can delete their own conversations"
 create type message_role as enum ('user', 'assistant');
 
 create table public.messages (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   conversation_id uuid not null references public.conversations(id) on delete cascade,
   user_id uuid not null references public.profiles(id) on delete cascade,
   role message_role not null,

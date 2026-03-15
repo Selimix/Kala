@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
-import { CATEGORIES, type EventCategory } from '../../constants/categories';
+import { ACTIVITY_TYPES, type ActivityType } from '../../constants/activity-types';
 import { formatEventDateTime } from '../../utils/date';
 import type { ToolCall } from '../../types/chat';
 
@@ -14,18 +14,31 @@ export function EventConfirmationCard({ toolCall }: Props) {
     title?: string;
     start_time?: string;
     end_time?: string;
+    activity_type?: ActivityType;
+    place_name?: string;
+    people_names?: string[];
+    // Legacy fields
     location?: string;
-    category?: EventCategory;
+    category?: string;
     people?: string[];
   };
 
-  const category = CATEGORIES[input.category || 'autre'];
+  // Prefer new fields, fallback to legacy
+  const activityType = input.activity_type || 'autre';
+  const activityConfig = ACTIVITY_TYPES[activityType] || ACTIVITY_TYPES.autre;
+  const locationText = input.place_name || input.location;
+  const peopleList = input.people_names || input.people;
 
   return (
-    <View style={[styles.card, { borderLeftColor: category.color }]}>
+    <View style={[styles.card, { borderLeftColor: activityConfig.color }]}>
       <View style={styles.header}>
-        <View style={[styles.categoryDot, { backgroundColor: category.color }]} />
-        <Text style={styles.category}>{category.label}</Text>
+        <Ionicons
+          name={activityConfig.icon as any}
+          size={14}
+          color={activityConfig.color}
+          style={styles.headerIcon}
+        />
+        <Text style={styles.activityLabel}>{activityConfig.label}</Text>
       </View>
 
       <Text style={styles.title}>{input.title}</Text>
@@ -37,17 +50,17 @@ export function EventConfirmationCard({ toolCall }: Props) {
         </Text>
       </View>
 
-      {input.location && (
+      {locationText && (
         <View style={styles.detail}>
           <Ionicons name="location-outline" size={14} color={Colors.textSecondary} />
-          <Text style={styles.detailText}>{input.location}</Text>
+          <Text style={styles.detailText}>{locationText}</Text>
         </View>
       )}
 
-      {input.people && input.people.length > 0 && (
+      {peopleList && peopleList.length > 0 && (
         <View style={styles.detail}>
           <Ionicons name="people-outline" size={14} color={Colors.textSecondary} />
-          <Text style={styles.detailText}>{input.people.join(', ')}</Text>
+          <Text style={styles.detailText}>{peopleList.join(', ')}</Text>
         </View>
       )}
     </View>
@@ -69,13 +82,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
-  categoryDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+  headerIcon: {
     marginRight: 6,
   },
-  category: {
+  activityLabel: {
     fontSize: 12,
     color: Colors.textSecondary,
     fontWeight: '600',

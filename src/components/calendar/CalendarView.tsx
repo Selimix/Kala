@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
 import { Colors } from '../../constants/colors';
-import { CATEGORIES } from '../../constants/categories';
+import { ACTIVITY_TYPES } from '../../constants/activity-types';
 import type { CalendarEvent } from '../../types/events';
 
 // Configuration du calendrier en francais
@@ -33,21 +33,21 @@ export function CalendarView({ selectedDate, onSelectDate, events }: Props) {
   const markedDates = useMemo(() => {
     const marks: Record<string, any> = {};
 
-    // Marquer les jours avec des evenements
+    // Marquer les jours avec des evenements (dots par activity_type)
     events.forEach(event => {
       const date = event.start_time.split('T')[0];
-      const category = CATEGORIES[event.category];
+      const activityConfig = ACTIVITY_TYPES[event.activity_type] || ACTIVITY_TYPES.autre;
       if (!marks[date]) {
         marks[date] = { dots: [] };
       }
-      marks[date].dots.push({ color: category.color });
+      marks[date].dots.push({ color: activityConfig.color });
     });
 
     // Marquer le jour selectionne
     marks[selectedDate] = {
       ...marks[selectedDate],
       selected: true,
-      selectedColor: Colors.primary,
+      selectedColor: Colors.authGold,
     };
 
     return marks;
@@ -61,16 +61,16 @@ export function CalendarView({ selectedDate, onSelectDate, events }: Props) {
       markingType="multi-dot"
       firstDay={1}
       theme={{
-        backgroundColor: Colors.background,
+        backgroundColor: Colors.homeBg,
         calendarBackground: Colors.surface,
         textSectionTitleColor: Colors.textSecondary,
-        selectedDayBackgroundColor: Colors.primary,
+        selectedDayBackgroundColor: Colors.authGold,
         selectedDayTextColor: Colors.textOnPrimary,
-        todayTextColor: Colors.primary,
+        todayTextColor: Colors.authGold,
         dayTextColor: Colors.text,
         textDisabledColor: Colors.textLight,
         monthTextColor: Colors.text,
-        arrowColor: Colors.primary,
+        arrowColor: Colors.authGold,
         textMonthFontWeight: '700',
         textDayFontSize: 14,
         textMonthFontSize: 16,

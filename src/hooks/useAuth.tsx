@@ -12,6 +12,8 @@ interface Profile {
   evening_checkin_time: string;
   notifications_enabled: boolean;
   ai_provider: AIProvider;
+  active_calendar_id: string | null;
+  has_completed_onboarding: boolean;
 }
 
 interface AuthContextType {
@@ -19,6 +21,7 @@ interface AuthContextType {
   profile: Profile | null;
   loading: boolean;
   updateProfile: (updates: Partial<Profile>) => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -26,6 +29,7 @@ const AuthContext = createContext<AuthContextType>({
   profile: null,
   loading: true,
   updateProfile: async () => {},
+  refreshProfile: async () => {},
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -76,8 +80,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!error && data) setProfile(data);
   }
 
+  async function refreshProfile() {
+    if (session?.user) {
+      await fetchProfile(session.user.id);
+    }
+  }
+
   return (
-    <AuthContext.Provider value={{ session, profile, loading, updateProfile }}>
+    <AuthContext.Provider value={{ session, profile, loading, updateProfile, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );

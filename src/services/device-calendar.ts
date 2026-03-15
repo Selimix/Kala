@@ -2,6 +2,7 @@ import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { CalendarEvent } from '../types/events';
 import { Colors } from '../constants/colors';
+import { ACTIVITY_TYPES } from '../constants/activity-types';
 
 // Import conditionnel — expo-calendar n'est pas disponible sur le web
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -125,19 +126,34 @@ async function saveEventMap(map: EventSyncMap): Promise<void> {
 // ============================================================
 
 function mapKalaEventToNative(event: CalendarEvent) {
-  // Build notes with people and category if available
+  // Build notes with activity type, people/personas, and description
   const notes: string[] = [];
-  if (event.description) notes.push(event.description);
-  if (event.people && event.people.length > 0) {
-    notes.push(`Participants : ${event.people.join(', ')}`);
+  const activityConfig = ACTIVITY_TYPES[event.activity_type];
+  if (activityConfig) {
+    notes.push(`Type : ${activityConfig.label}`);
   }
+  if (event.description) notes.push(event.description);
+
+  // Prefer personas, fallback to legacy people[]
+  const peopleNames =
+    event.event_personas && event.event_personas.length > 0
+      ? event.event_personas.map(ep => ep.persona.name)
+      : event.people && event.people.length > 0
+        ? event.people
+        : [];
+  if (peopleNames.length > 0) {
+    notes.push(`Participants : ${peopleNames.join(', ')}`);
+  }
+
+  // Prefer place entity, fallback to legacy location
+  const locationText = event.place?.name || event.location || '';
 
   return {
     title: event.title,
     notes: notes.join('\n'),
     startDate: new Date(event.start_time),
     endDate: new Date(event.end_time),
-    location: event.location || '',
+    location: locationText,
     allDay: event.is_all_day,
     timeZone: 'Europe/Paris',
   };

@@ -2,6 +2,7 @@ export const Strings = {
   app: {
     name: 'Kāla काल AI',
     tagline: 'Votre assistant intelligent d\'agenda',
+    taglineUpper: 'L\'ASSISTANT INFATIGABLE QUI RÂLE PAS',
   },
 
   auth: {
@@ -21,13 +22,15 @@ export const Strings = {
   },
 
   tabs: {
-    chat: 'Kāla',
-    calendar: 'Agenda',
+    chat: 'Messages',
+    calendar: 'Calendrier',
     settings: 'Réglages',
   },
 
   chat: {
-    placeholder: 'Décrivez un événement...',
+    placeholder: 'Demandez-moi n\'importe quoi...',
+    listening: 'Écoute en cours...',
+    tapToSpeak: 'Appuyez pour parler',
     greeting: 'Bonjour ! Je suis Kāla, votre assistant d\'agenda. Dites-moi ce que vous avez prévu et je m\'occupe du reste.',
     thinking: 'Kāla réfléchit...',
     error: 'Désolé, une erreur est survenue. Réessayez.',
@@ -55,6 +58,7 @@ export const Strings = {
     version: 'Version',
   },
 
+  // Rétrocompat
   categories: {
     travail: 'Travail',
     personnel: 'Personnel',
@@ -65,11 +69,162 @@ export const Strings = {
     autre: 'Autre',
   },
 
+  activityTypes: {
+    deplacement: 'Déplacement',
+    reunion: 'Réunion',
+    diner: 'Dîner',
+    dejeuner: 'Déjeuner',
+    appel: 'Appel téléphonique',
+    visioconference: 'Visioconférence',
+    rdv_medical: 'Rendez-vous médical',
+    sport: 'Sport / Entraînement',
+    courses: 'Courses',
+    administratif: 'Administratif',
+    evenement_social: 'Événement social',
+    travail_focus: 'Travail / Focus',
+    pause: 'Pause / Repos',
+    autre: 'Autre',
+  },
+
+  places: {
+    title: 'Lieux',
+    restaurant: 'Restaurant',
+    bureau: 'Bureau',
+    domicile: 'Domicile',
+    salle_de_sport: 'Salle de sport',
+    hopital: 'Hôpital',
+    cabinet_medical: 'Cabinet médical',
+    ecole: 'École',
+    commerce: 'Commerce',
+    bar: 'Bar',
+    parc: 'Parc',
+    gare: 'Gare',
+    aeroport: 'Aéroport',
+    autre: 'Autre',
+  },
+
+  personas: {
+    title: 'Contacts',
+    collegue: 'Collègue',
+    ami: 'Ami(e)',
+    famille: 'Famille',
+    medecin: 'Médecin',
+    client: 'Client',
+    prestataire: 'Prestataire',
+    voisin: 'Voisin(e)',
+    autre: 'Autre',
+  },
+
   event: {
     edit: 'Modifier',
     delete: 'Supprimer',
     deleteConfirm: 'Êtes-vous sûr de vouloir supprimer cet événement ?',
     deleteConfirmYes: 'Supprimer',
     deleteConfirmNo: 'Annuler',
+  },
+
+  onboarding: {
+    welcome: 'Bienvenue sur Kāla !',
+    subtitle: 'Commencez par créer ou rejoindre un calendrier partagé.',
+    createCalendar: 'Créer un calendrier',
+    joinCalendar: 'Rejoindre un calendrier',
+    calendarName: 'Nom du calendrier',
+    calendarNamePlaceholder: 'Ex : Famille, Travail, Perso...',
+    calendarDescription: 'Description (optionnelle)',
+    create: 'Créer',
+    inviteCode: 'Code d\'invitation',
+    inviteCodePlaceholder: 'KAL-XXXX',
+    join: 'Rejoindre',
+    invalidCode: 'Code invalide ou expiré',
+    alreadyMember: 'Vous êtes déjà membre de ce calendrier',
+    joined: 'Calendrier rejoint !',
+  },
+
+  calendars: {
+    title: 'Mes calendriers',
+    create: 'Créer un calendrier',
+    join: 'Rejoindre avec un code',
+    active: 'Actif',
+    leave: 'Quitter',
+    leaveConfirm: 'Êtes-vous sûr de vouloir quitter ce calendrier ?',
+    delete: 'Supprimer le calendrier',
+    deleteConfirm: 'Cette action est irréversible. Tous les événements seront supprimés.',
+    members: 'Membres',
+    inviteCodes: 'Codes d\'invitation',
+    generateCode: 'Générer un code',
+    copyCode: 'Copier',
+    codeCopied: 'Code copié !',
+    codeExpires: 'Expire le',
+    noExpiry: 'Sans expiration',
+    roles: {
+      owner: 'Propriétaire',
+      editor: 'Éditeur',
+      viewer: 'Lecteur',
+    },
+    settings: 'Paramètres du calendrier',
+    noCalendars: 'Aucun calendrier',
+  },
+
+  tasks: {
+    title: 'Tâches',
+    pending: 'À faire',
+    in_progress: 'En cours',
+    completed: 'Terminée',
+    priorities: {
+      low: 'Basse',
+      medium: 'Moyenne',
+      high: 'Haute',
+      urgent: 'Urgente',
+    },
+    noDueDate: 'Sans échéance',
+    dueDateLabel: 'Échéance',
+    created: 'Tâche créée',
+    updated: 'Tâche modifiée',
+    completed_action: 'Tâche terminée',
+    deleted: 'Tâche supprimée',
+  },
+
+  taskCategories: {
+    title: 'Catégories',
+    defaultCategoriesTitle: 'Catégories de tâches',
+    defaultCategoriesHint: 'Sélectionnez les catégories par défaut pour ce calendrier',
+    privateTask: 'Tâche privée',
+    privateTaskHint: 'Les détails sont masqués pour les autres membres',
+    categoryCreated: 'Catégorie créée',
+    noCategory: 'Sans catégorie',
+  },
+
+  smartAssistant: {
+    sendSms: 'Envoyer le SMS',
+    smsPreview: 'Aperçu du message',
+    noPhoneNumber: 'Pas de numéro de téléphone pour ce contact',
+    ratePlacePlaceholder: 'Donnez votre avis...',
+    searchingRestaurants: 'Recherche de restaurants...',
+    notifyContact: 'Prévenir',
+  },
+
+  restaurants: {
+    favori: 'Favori',
+    foursquare: 'Foursquare',
+    nouveau: 'Nouveau',
+    chooseThisPlace: 'Choisir ce lieu',
+    viewOnMap: 'Voir sur la carte',
+    visits: 'visites',
+    noRating: 'Pas de note',
+    resultsTitle: 'Restaurants trouvés',
+    cheap: 'Bon marché',
+    moderate: 'Modéré',
+    expensive: 'Cher',
+    veryExpensive: 'Très cher',
+  },
+
+  notifications: {
+    morningTitle: 'Bonjour ! ☀️',
+    morningEmpty: 'Rien de prévu aujourd\'hui — envie de planifier quelque chose ?',
+    eveningTitle: 'Bonsoir ! 🌙',
+    eveningEmpty: 'Demain est libre — voulez-vous ajouter un événement ?',
+    eventReminderTitle: 'Bientôt ⏰',
+    taskDueEveTitle: 'Tâche à faire demain 📋',
+    taskDueTodayTitle: 'Échéance proche ⚡',
   },
 } as const;

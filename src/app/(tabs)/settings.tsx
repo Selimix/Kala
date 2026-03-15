@@ -1,17 +1,20 @@
 import { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Switch, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, Switch, StyleSheet, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { signOut } from '../../services/auth';
 import { useAuth } from '../../hooks/useAuth';
+import { useCalendar } from '../../hooks/useCalendar';
 import { Colors } from '../../constants/colors';
 import { Strings } from '../../constants/strings.fr';
 import { AI_PROVIDERS, type AIProvider } from '../../constants/providers';
 import { isSyncEnabled, setSyncEnabled, clearSyncData } from '../../services/device-calendar';
+import { leaveCalendar } from '../../services/calendars';
 
 export default function SettingsScreen() {
   const { profile, updateProfile } = useAuth();
+  const { calendars, activeCalendarId, setActiveCalendar, refreshCalendars } = useCalendar();
   const [calendarSyncEnabled, setCalendarSyncEnabled] = useState(true);
 
   useEffect(() => {
@@ -37,6 +40,33 @@ export default function SettingsScreen() {
     await updateProfile({ ai_provider: provider });
   };
 
+  const handleLeaveCalendar = (calendarId: string, calendarName: string) => {
+    Alert.alert(
+      Strings.calendars.leave,
+      Strings.calendars.leaveConfirm,
+      [
+        { text: Strings.event.deleteConfirmNo, style: 'cancel' },
+        {
+          text: Strings.calendars.leave,
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await leaveCalendar(calendarId);
+              await refreshCalendars();
+              // Si c'était le calendrier actif, switcher au premier disponible
+              if (calendarId === activeCalendarId && calendars.length > 1) {
+                const next = calendars.find(c => c.id !== calendarId);
+                if (next) await setActiveCalendar(next.id);
+              }
+            } catch (err) {
+              console.error('Erreur quitter calendrier:', err);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const currentProvider = profile?.ai_provider || 'claude';
 
   return (
@@ -53,6 +83,75 @@ export default function SettingsScreen() {
             <Text style={styles.displayName}>
               {profile?.display_name || 'Utilisateur'}
             </Text>
+          </View>
+        </View>
+
+        {/* ── Section calendriers ── */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>{Strings.calendars.title}</Text>
+          <View style={styles.card}>
+            {calendars.map((cal, index) => {
+              const isActive = cal.id === activeCalendarId;
+              const roleLabel = Strings.calendars.roles[cal.role] || '';
+              return (
+                <View key={cal.id}>
+                  {index > 0 && <View style={styles.divider} />}
+                  <TouchableOpacity
+                    style={styles.calendarRow}
+                    onPress={() => {
+                      if (cal.role === 'owner') {
+                        router.push({ pathname: '/calendar-settings' as any, params: { calendarId: cal.id } });
+                      }
+                    }}
+                  >
+                    <Text style={styles.calendarEmoji}>{cal.emoji}</Text>
+                    <View style={styles.calendarInfo}>
+                      <Text style={[styles.calendarName, isActive && styles.calendarNameActive]}>
+                        {cal.name}
+                      </Text>
+                      <Text style={styles.calendarRole}>{roleLabel}</Text>
+                    </View>
+                    {isActive && (
+                      <View style={styles.activeBadge}>
+                        <Text style={styles.activeBadgeText}>{Strings.calendars.active}</Text>
+                      </View>
+                    )}
+                    {cal.role !== 'owner' && (
+                      <TouchableOpacity
+                        onPress={() => handleLeaveCalendar(cal.id, cal.name)}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <Ionicons name="exit-outline" size={18} color={Colors.error} />
+                      </TouchableOpacity>
+                    )}
+                    {cal.role === 'owner' && (
+                      <Ionicons name="chevron-forward" size={16} color={Colors.textLight} />
+                    )}
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
+            {calendars.length === 0 && (
+              <Text style={styles.emptyText}>{Strings.calendars.noCalendars}</Text>
+            )}
+          </View>
+
+          {/* Boutons créer / rejoindre */}
+          <View style={styles.calendarActions}>
+            <TouchableOpacity
+              style={styles.calendarActionBtn}
+              onPress={() => router.push('/create-calendar' as any)}
+            >
+              <Ionicons name="add-circle-outline" size={18} color={Colors.authGold} />
+              <Text style={styles.calendarActionText}>{Strings.calendars.create}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.calendarActionBtn}
+              onPress={() => router.push('/join-calendar' as any)}
+            >
+              <Ionicons name="enter-outline" size={18} color={Colors.authGold} />
+              <Text style={styles.calendarActionText}>{Strings.calendars.join}</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -191,6 +290,78 @@ const styles = StyleSheet.create({
     color: Colors.text,
     textAlign: 'center',
   },
+
+  // ── Calendriers ──
+  calendarRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    gap: 10,
+  },
+  calendarEmoji: {
+    fontSize: 22,
+  },
+  calendarInfo: {
+    flex: 1,
+  },
+  calendarName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text,
+  },
+  calendarNameActive: {
+    color: Colors.authGold,
+  },
+  calendarRole: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+    marginTop: 1,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+  activeBadge: {
+    backgroundColor: Colors.authGold + '20',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  activeBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: Colors.authGold,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: Colors.textLight,
+    textAlign: 'center',
+    paddingVertical: 8,
+  },
+  calendarActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 10,
+  },
+  calendarActionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: Colors.surface,
+    borderRadius: 10,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: Colors.authGold + '40',
+  },
+  calendarActionText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: Colors.authGold,
+  },
+
+  // ── Providers ──
   providerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

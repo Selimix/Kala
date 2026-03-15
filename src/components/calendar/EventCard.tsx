@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
-import { CATEGORIES } from '../../constants/categories';
+import { ACTIVITY_TYPES } from '../../constants/activity-types';
 import { formatEventTime } from '../../utils/date';
 import type { CalendarEvent } from '../../types/events';
 
@@ -10,10 +10,21 @@ interface Props {
 }
 
 export function EventCard({ event }: Props) {
-  const category = CATEGORIES[event.category];
+  const activityConfig = ACTIVITY_TYPES[event.activity_type] || ACTIVITY_TYPES.autre;
+
+  // Determine location text: prefer place entity, fallback to legacy location
+  const locationText = event.place?.name || event.location;
+
+  // Determine people text: prefer personas, fallback to legacy people[]
+  const peopleText =
+    event.event_personas && event.event_personas.length > 0
+      ? event.event_personas.map(ep => ep.persona.name).join(', ')
+      : event.people.length > 0
+        ? event.people.join(', ')
+        : null;
 
   return (
-    <View style={[styles.card, { borderLeftColor: category.color }]}>
+    <View style={[styles.card, { borderLeftColor: activityConfig.color }]}>
       <View style={styles.timeContainer}>
         <Text style={styles.time}>
           {event.is_all_day ? 'Journée' : formatEventTime(event.start_time)}
@@ -26,22 +37,38 @@ export function EventCard({ event }: Props) {
       </View>
 
       <View style={styles.content}>
-        <Text style={styles.title} numberOfLines={1}>
-          {event.title}
-        </Text>
-        {event.location && (
+        <View style={styles.titleRow}>
+          <Ionicons
+            name={activityConfig.icon as any}
+            size={14}
+            color={activityConfig.color}
+            style={styles.activityIcon}
+          />
+          <Text style={styles.title} numberOfLines={1}>
+            {event.title}
+          </Text>
+        </View>
+        {locationText && (
           <View style={styles.detail}>
             <Ionicons name="location-outline" size={12} color={Colors.textSecondary} />
             <Text style={styles.detailText} numberOfLines={1}>
-              {event.location}
+              {locationText}
             </Text>
           </View>
         )}
-        {event.people.length > 0 && (
+        {peopleText && (
           <View style={styles.detail}>
             <Ionicons name="people-outline" size={12} color={Colors.textSecondary} />
             <Text style={styles.detailText} numberOfLines={1}>
-              {event.people.join(', ')}
+              {peopleText}
+            </Text>
+          </View>
+        )}
+        {event.creator?.display_name && (
+          <View style={styles.detail}>
+            <Ionicons name="person-circle-outline" size={12} color={Colors.textLight} />
+            <Text style={[styles.detailText, styles.creatorText]} numberOfLines={1}>
+              {event.creator.display_name}
             </Text>
           </View>
         )}
@@ -80,11 +107,19 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  activityIcon: {
+    marginRight: 6,
+  },
   title: {
     fontSize: 15,
     fontWeight: '600',
     color: Colors.text,
-    marginBottom: 4,
+    flex: 1,
   },
   detail: {
     flexDirection: 'row',
@@ -95,5 +130,9 @@ const styles = StyleSheet.create({
   detailText: {
     fontSize: 12,
     color: Colors.textSecondary,
+  },
+  creatorText: {
+    color: Colors.textLight,
+    fontStyle: 'italic',
   },
 });

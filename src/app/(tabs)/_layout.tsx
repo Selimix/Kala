@@ -4,32 +4,46 @@ import { Colors } from '../../constants/colors';
 import { Strings } from '../../constants/strings.fr';
 import { useNotifications } from '../../hooks/useNotifications';
 import { useCalendarSync } from '../../hooks/useCalendarSync';
+import { useCalendar } from '../../hooks/useCalendar';
+import { CalendarSelector } from '../../components/ui/CalendarSelector';
 
 export default function TabsLayout() {
   useNotifications();
   useCalendarSync();
 
+  const { calendars, activeCalendarId, setActiveCalendar } = useCalendar();
+
+  const calendarSelectorHeader = () => (
+    <CalendarSelector
+      calendars={calendars}
+      activeCalendarId={activeCalendarId}
+      onSelect={setActiveCalendar}
+    />
+  );
+
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors.primary,
-        tabBarInactiveTintColor: Colors.textLight,
+        tabBarActiveTintColor: Colors.authGold,
+        tabBarInactiveTintColor: Colors.homeTextMuted,
         tabBarStyle: {
-          backgroundColor: Colors.surface,
-          borderTopColor: Colors.borderLight,
+          backgroundColor: Colors.authBackground,
+          borderTopColor: Colors.homeInputBorder,
           paddingBottom: 8,
           paddingTop: 8,
           height: 88,
         },
         tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '600',
+          fontSize: 10,
+          fontWeight: '700',
+          letterSpacing: 1,
+          textTransform: 'uppercase',
         },
         headerStyle: {
-          backgroundColor: Colors.surface,
+          backgroundColor: Colors.authBackground,
         },
         headerTitleStyle: {
-          color: Colors.text,
+          color: Colors.authTitle,
           fontWeight: '700',
           fontSize: 18,
         },
@@ -40,8 +54,30 @@ export default function TabsLayout() {
         name="chat"
         options={{
           title: Strings.tabs.chat,
+          headerShown: true,
+          headerTitle: calendarSelectorHeader,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="chatbubble-ellipses" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="events"
+        options={{
+          title: 'Rendez-vous',
+          headerTitle: calendarSelectorHeader,
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="list" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="tasks"
+        options={{
+          title: 'Tâches',
+          headerTitle: calendarSelectorHeader,
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="checkbox" size={size} color={color} />
           ),
         }}
       />
@@ -49,6 +85,7 @@ export default function TabsLayout() {
         name="calendar"
         options={{
           title: Strings.tabs.calendar,
+          headerTitle: calendarSelectorHeader,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="calendar" size={size} color={color} />
           ),

@@ -4,7 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { Colors } from '../constants/colors';
 
 export default function Index() {
-  const { session, loading } = useAuth();
+  const { session, profile, loading } = useAuth();
 
   if (loading) {
     return (
@@ -14,11 +14,16 @@ export default function Index() {
     );
   }
 
-  if (session) {
-    return <Redirect href="/(tabs)/chat" />;
+  if (!session) {
+    return <Redirect href="/(auth)/login" />;
   }
 
-  return <Redirect href="/(auth)/login" />;
+  // Si l'onboarding n'est pas terminé, rediriger vers l'onboarding
+  if (!profile?.has_completed_onboarding) {
+    return <Redirect href={'/(onboarding)' as any} />;
+  }
+
+  return <Redirect href="/(tabs)/chat" />;
 }
 
 const styles = StyleSheet.create({

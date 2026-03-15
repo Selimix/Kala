@@ -28,7 +28,8 @@ export default function LoginScreen() {
       if (error) {
         Alert.alert('Erreur', Strings.auth.loginError);
       } else {
-        router.replace('/(tabs)/chat');
+        // Le routing sera géré par index.tsx (onboarding check)
+        router.replace('/');
       }
     } catch {
       Alert.alert('Erreur', Strings.auth.loginError);

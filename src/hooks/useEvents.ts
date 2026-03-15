@@ -1,23 +1,25 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getEventsForDate } from '../services/events';
 import { supabase } from '../services/supabase';
+import { useCalendar } from './useCalendar';
 import type { CalendarEvent } from '../types/events';
 
 export function useEvents(selectedDate: string) {
+  const { activeCalendarId } = useCalendar();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchEvents = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await getEventsForDate(selectedDate);
+      const data = await getEventsForDate(selectedDate, activeCalendarId || undefined);
       setEvents(data);
     } catch (error) {
       console.error('Erreur chargement événements:', error);
     } finally {
       setLoading(false);
     }
-  }, [selectedDate]);
+  }, [selectedDate, activeCalendarId]);
 
   useEffect(() => {
     fetchEvents();

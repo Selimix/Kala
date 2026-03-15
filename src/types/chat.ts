@@ -9,6 +9,7 @@ export interface Message {
   tool_calls: ToolCall[] | null;
   tool_results: ToolResult[] | null;
   event_id: string | null;
+  task_id: string | null;
   created_at: string;
 }
 
@@ -35,7 +36,9 @@ export interface Conversation {
 export interface AgentResponse {
   assistant_message: string;
   tool_calls: ToolCall[] | null;
+  tool_results: ToolResult[] | null;
   events_affected: string[];
+  tasks_affected: string[];
   conversation_id: string;
   message_id: string;
 }

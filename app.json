@@ -16,7 +16,8 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.kala.app",
       "infoPlist": {
-        "NSCalendarsUsageDescription": "Kāla a besoin d'accéder à votre calendrier pour y synchroniser vos événements."
+        "NSCalendarsUsageDescription": "Kāla a besoin d'accéder à votre calendrier pour y synchroniser vos événements.",
+        "NSLocationWhenInUseUsageDescription": "Kāla utilise votre position pour trouver des lieux proches de vous."
       }
     },
     "android": {
@@ -49,6 +50,14 @@
         "expo-calendar",
         {
           "calendarPermission": "Kāla a besoin d'accéder à votre calendrier pour y synchroniser vos événements."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Kāla utilise votre position pour trouver des lieux proches de vous.",
+          "isAndroidBackgroundLocationEnabled": false,
+          "isAndroidForegroundServiceEnabled": false
         }
       ]
     ],

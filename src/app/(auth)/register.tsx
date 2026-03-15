@@ -45,7 +45,7 @@ export default function RegisterScreen() {
       if (error) {
         Alert.alert('Erreur', Strings.auth.registerError);
       } else {
-        router.replace('/(tabs)/chat');
+        router.replace('/(onboarding)' as any);
       }
     } catch {
       Alert.alert('Erreur', Strings.auth.registerError);

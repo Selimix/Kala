@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,30 +11,97 @@ import {
   Image,
 } from 'react-native';
 import { Link, router } from 'expo-router';
-import { signIn } from '../../services/auth';
+import { Ionicons } from '@expo/vector-icons';
+import { signIn, resetPassword } from '../../services/auth';
+import {
+  isBiometricAvailable,
+  getBiometricType,
+  isBiometricLoginEnabled,
+  authenticateWithBiometrics,
+  saveBiometricCredentials,
+} from '../../services/biometrics';
 import { Colors } from '../../constants/colors';
 import { Strings } from '../../constants/strings.fr';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [biometricReady, setBiometricReady] = useState(false);
+  const [biometricLabel, setBiometricLabel] = useState('');
 
-  const handleLogin = async () => {
-    if (!email || !password) return;
+  // Check biometric availability on mount
+  useEffect(() => {
+    (async () => {
+      const available = await isBiometricAvailable();
+      const enabled = await isBiometricLoginEnabled();
+      if (available && enabled) {
+        setBiometricReady(true);
+        const label = await getBiometricType();
+        setBiometricLabel(label);
+        // Auto-trigger biometric on first load
+        handleBiometricLogin();
+      }
+    })();
+  }, []);
+
+  const handleLogin = async (loginEmail?: string, loginPassword?: string) => {
+    const e = loginEmail || email;
+    const p = loginPassword || password;
+    if (!e || !p) {
+      Alert.alert('Erreur', 'Veuillez remplir tous les champs.');
+      return;
+    }
     setLoading(true);
     try {
-      const { error } = await signIn(email, password);
+      const { error } = await signIn(e, p);
       if (error) {
         Alert.alert('Erreur', Strings.auth.loginError);
       } else {
-        // Le routing sera géré par index.tsx (onboarding check)
+        // Save credentials for biometric login next time
+        const bioAvailable = await isBiometricAvailable();
+        if (bioAvailable) {
+          await saveBiometricCredentials(e, p);
+        }
         router.replace('/');
       }
     } catch {
       Alert.alert('Erreur', Strings.auth.loginError);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleBiometricLogin = async () => {
+    setLoading(true);
+    try {
+      const credentials = await authenticateWithBiometrics();
+      if (credentials) {
+        await handleLogin(credentials.email, credentials.password);
+      }
+    } catch {
+      // User cancelled or biometric failed — do nothing
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    const emailToReset = email.trim();
+    if (!emailToReset) {
+      Alert.alert(Strings.auth.resetPasswordTitle, 'Entrez votre email ci-dessus, puis appuyez sur "Mot de passe oublié".');
+      return;
+    }
+    try {
+      const { error } = await resetPassword(emailToReset);
+      if (error) {
+        Alert.alert('Erreur', Strings.auth.resetPasswordError);
+      } else {
+        Alert.alert(Strings.auth.resetPasswordSent, Strings.auth.resetPasswordSentMessage);
+      }
+    } catch {
+      Alert.alert('Erreur', Strings.auth.resetPasswordError);
     }
   };
 
@@ -65,24 +132,59 @@ export default function LoginScreen() {
             keyboardType="email-address"
             textContentType="emailAddress"
           />
-          <TextInput
-            style={styles.input}
-            placeholder={Strings.auth.password}
-            placeholderTextColor={Colors.textLight}
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            textContentType="password"
-          />
+          <View style={styles.passwordContainer}>
+            <TextInput
+              style={styles.passwordInput}
+              placeholder={Strings.auth.password}
+              placeholderTextColor={Colors.textLight}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+              textContentType="password"
+            />
+            <TouchableOpacity
+              style={styles.eyeButton}
+              onPress={() => setShowPassword(prev => !prev)}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons
+                name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                size={22}
+                color={Colors.textSecondary}
+              />
+            </TouchableOpacity>
+          </View>
 
           <TouchableOpacity
             style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={handleLogin}
+            onPress={() => handleLogin()}
             disabled={loading}
           >
             <Text style={styles.buttonText}>
               {loading ? '...' : Strings.auth.login}
             </Text>
+          </TouchableOpacity>
+
+          {/* Biometric login button */}
+          {biometricReady && (
+            <TouchableOpacity
+              style={styles.biometricButton}
+              onPress={handleBiometricLogin}
+              disabled={loading}
+            >
+              <Ionicons
+                name={biometricLabel.includes('Face') ? 'scan-outline' : 'finger-print-outline'}
+                size={24}
+                color={Colors.authGold}
+              />
+              <Text style={styles.biometricText}>
+                Se connecter avec {biometricLabel}
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          <TouchableOpacity onPress={handleForgotPassword} style={styles.forgotContainer}>
+            <Text style={styles.forgotText}>{Strings.auth.forgotPassword}</Text>
           </TouchableOpacity>
         </View>
 
@@ -146,6 +248,25 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
   },
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  passwordInput: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+    color: Colors.text,
+  },
+  eyeButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+  },
   button: {
     backgroundColor: Colors.authGold,
     borderRadius: 10,
@@ -161,6 +282,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  biometricButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingVertical: 14,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: Colors.authGold,
+    backgroundColor: Colors.authGold + '10',
+  },
+  biometricText: {
+    color: Colors.authGold,
+    fontSize: 15,
+    fontWeight: '600',
+  },
   linkContainer: {
     alignItems: 'center',
     marginTop: 24,
@@ -169,5 +306,13 @@ const styles = StyleSheet.create({
     color: Colors.authTitle,
     fontSize: 15,
     fontWeight: '500',
+  },
+  forgotContainer: {
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  forgotText: {
+    color: Colors.textSecondary,
+    fontSize: 14,
   },
 });

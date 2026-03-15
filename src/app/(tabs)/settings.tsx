@@ -11,20 +11,53 @@ import { Strings } from '../../constants/strings.fr';
 import { AI_PROVIDERS, type AIProvider } from '../../constants/providers';
 import { isSyncEnabled, setSyncEnabled, clearSyncData } from '../../services/device-calendar';
 import { leaveCalendar } from '../../services/calendars';
+import {
+  isBiometricAvailable,
+  getBiometricType,
+  isBiometricLoginEnabled,
+  clearBiometricCredentials,
+} from '../../services/biometrics';
 
 export default function SettingsScreen() {
   const { profile, updateProfile } = useAuth();
   const { calendars, activeCalendarId, setActiveCalendar, refreshCalendars } = useCalendar();
   const [calendarSyncEnabled, setCalendarSyncEnabled] = useState(true);
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [biometricEnabled, setBiometricEnabled] = useState(false);
+  const [biometricType, setBiometricType] = useState('');
 
   useEffect(() => {
     isSyncEnabled().then(setCalendarSyncEnabled);
+    // Check biometric state
+    (async () => {
+      const available = await isBiometricAvailable();
+      setBiometricAvailable(available);
+      if (available) {
+        const enabled = await isBiometricLoginEnabled();
+        setBiometricEnabled(enabled);
+        const type = await getBiometricType();
+        setBiometricType(type);
+      }
+    })();
   }, []);
 
   const handleLogout = async () => {
     await clearSyncData();
     await signOut();
     router.replace('/(auth)/login');
+  };
+
+  const toggleBiometric = async (value: boolean) => {
+    if (!value) {
+      await clearBiometricCredentials();
+      setBiometricEnabled(false);
+    } else {
+      // Can't enable here — user needs to login again to save credentials
+      Alert.alert(
+        biometricType || 'Biométrie',
+        'Déconnectez-vous puis reconnectez-vous avec votre mot de passe pour activer la connexion biométrique.',
+      );
+    }
   };
 
   const toggleNotifications = async (value: boolean) => {
@@ -229,6 +262,33 @@ export default function SettingsScreen() {
           </View>
         </View>
 
+        {/* ── Biométrie ── */}
+        {biometricAvailable && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Sécurité</Text>
+            <View style={styles.card}>
+              <View style={styles.settingRow}>
+                <View style={styles.biometricInfo}>
+                  <Ionicons
+                    name={biometricType.includes('Face') ? 'scan-outline' : 'finger-print-outline'}
+                    size={20}
+                    color={Colors.authGold}
+                  />
+                  <Text style={styles.settingLabel}>
+                    Connexion {biometricType}
+                  </Text>
+                </View>
+                <Switch
+                  value={biometricEnabled}
+                  onValueChange={toggleBiometric}
+                  trackColor={{ false: Colors.borderLight, true: Colors.primaryLight }}
+                  thumbColor={biometricEnabled ? Colors.primary : Colors.textLight}
+                />
+              </View>
+            </View>
+          </View>
+        )}
+
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <Text style={styles.logoutText}>{Strings.settings.logout}</Text>
         </TouchableOpacity>
@@ -397,6 +457,11 @@ const styles = StyleSheet.create({
   syncInfo: {
     flex: 1,
     marginRight: 12,
+  },
+  biometricInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
   settingLabel: {
     fontSize: 16,

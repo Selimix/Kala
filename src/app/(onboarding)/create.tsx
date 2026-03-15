@@ -35,7 +35,7 @@ export default function CreateCalendarScreen() {
   );
   const [loading, setLoading] = useState(false);
   const { refreshCalendars } = useCalendar();
-  const { refreshProfile } = useAuth();
+  const { session, refreshProfile } = useAuth();
 
   const toggleCategory = (key: string) => {
     setSelectedCategories(prev =>
@@ -45,6 +45,11 @@ export default function CreateCalendarScreen() {
 
   const handleCreate = async () => {
     if (!name.trim()) return;
+    if (!session) {
+      Alert.alert('Erreur', 'Vous devez être connecté pour créer un calendrier. Veuillez vous reconnecter.');
+      router.replace('/(auth)/login');
+      return;
+    }
     setLoading(true);
     try {
       const calendar = await createCalendar({

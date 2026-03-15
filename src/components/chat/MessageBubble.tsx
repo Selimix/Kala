@@ -1,27 +1,40 @@
-import { useState, useMemo } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { useState, useMemo, useCallback } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ActionSheetIOS,
+  Platform,
+  Alert,
+} from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { Colors } from '../../constants/colors';
 import { EventConfirmationCard } from './EventConfirmationCard';
 import { TaskConfirmationCard } from './TaskConfirmationCard';
 import { SmsProposalCard } from './SmsProposalCard';
 import { RestaurantCarousel } from './RestaurantCarousel';
 import { RestaurantDetailModal } from './RestaurantDetailModal';
+import { SuggestionChips } from './SuggestionChips';
 import type { Message } from '../../types/chat';
 import type { RestaurantResult, SearchRestaurantsResult } from '../../types/restaurants';
 
 interface Props {
   message: Message;
   onSendMessage?: (text: string) => void;
+  onEditMessage?: (message: Message) => void;
+  isLatest?: boolean;
 }
 
 const TASK_TOOL_NAMES = ['create_task', 'update_task', 'complete_task', 'create_task_category'];
 const SMS_TOOL_NAMES = ['propose_sms'];
 const RESTAURANT_TOOL_NAMES = ['search_restaurants'];
 
-export function MessageBubble({ message, onSendMessage }: Props) {
+export function MessageBubble({ message, onSendMessage, onEditMessage, isLatest = false }: Props) {
   const isUser = message.role === 'user';
   const [selectedRestaurant, setSelectedRestaurant] = useState<RestaurantResult | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [chipSelected, setChipSelected] = useState<string | null>(null);
 
   const hasEventToolCall = message.tool_calls?.some(
     tc => tc.name === 'create_event' || tc.name === 'update_event'
@@ -35,6 +48,21 @@ export function MessageBubble({ message, onSendMessage }: Props) {
   const hasRestaurantToolCall = message.tool_calls?.some(
     tc => RESTAURANT_TOOL_NAMES.includes(tc.name)
   );
+
+  // Parse present_options tool calls
+  const optionsData = useMemo(() => {
+    const optionsCalls = message.tool_calls?.filter(tc => tc.name === 'present_options') || [];
+    if (optionsCalls.length === 0) return null;
+
+    return optionsCalls.map(tc => {
+      const input = tc.input as { options: Array<{ label: string; icon?: string }>; question?: string };
+      return {
+        id: tc.id,
+        options: input.options || [],
+        question: input.question,
+      };
+    });
+  }, [message.tool_calls]);
 
   // Parse restaurant data from tool_results
   const restaurantData = useMemo(() => {
@@ -62,17 +90,71 @@ export function MessageBubble({ message, onSendMessage }: Props) {
     }
   }, [message.tool_calls, message.tool_results, hasRestaurantToolCall]);
 
+  const handleLongPress = useCallback(() => {
+    const options = ['Copier'];
+    if (isUser && onEditMessage) {
+      options.push('Modifier');
+    }
+    options.push('Annuler');
+
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options,
+          cancelButtonIndex: options.length - 1,
+        },
+        (buttonIndex) => {
+          if (options[buttonIndex] === 'Copier') {
+            Clipboard.setStringAsync(message.content);
+          } else if (options[buttonIndex] === 'Modifier') {
+            onEditMessage?.(message);
+          }
+        }
+      );
+    } else {
+      const buttons = [
+        {
+          text: 'Copier',
+          onPress: () => Clipboard.setStringAsync(message.content),
+        },
+      ];
+      if (isUser && onEditMessage) {
+        buttons.push({
+          text: 'Modifier',
+          onPress: () => onEditMessage(message),
+        });
+      }
+      buttons.push({ text: 'Annuler', onPress: () => {} });
+      Alert.alert('Message', undefined, buttons);
+    }
+  }, [message, isUser, onEditMessage]);
+
+  const handleChipSelect = useCallback((label: string) => {
+    setChipSelected(label);
+    // Envoyer le choix comme message
+    onSendMessage?.(label);
+  }, [onSendMessage]);
+
   return (
     <View style={[
       styles.container,
       isUser ? styles.userContainer : styles.assistantContainer,
-      restaurantData && styles.wideContainer,
+      (restaurantData || optionsData) && styles.wideContainer,
     ]}>
-      <View style={[styles.bubble, isUser ? styles.userBubble : styles.assistantBubble]}>
-        <Text style={[styles.text, isUser ? styles.userText : styles.assistantText]}>
-          {message.content}
-        </Text>
-      </View>
+      <TouchableOpacity
+        activeOpacity={0.7}
+        onLongPress={handleLongPress}
+        delayLongPress={400}
+      >
+        <View style={[styles.bubble, isUser ? styles.userBubble : styles.assistantBubble]}>
+          <Text
+            style={[styles.text, isUser ? styles.userText : styles.assistantText]}
+            selectable
+          >
+            {message.content}
+          </Text>
+        </View>
+      </TouchableOpacity>
 
       {hasEventToolCall &&
         message.tool_calls
@@ -92,6 +174,18 @@ export function MessageBubble({ message, onSendMessage }: Props) {
           .map(tc => (
             <SmsProposalCard key={tc.id} toolCall={tc} />
           ))}
+
+      {/* Suggestion chips — interactive options */}
+      {optionsData?.map((opt, i) => (
+        <SuggestionChips
+          key={opt.id || i}
+          options={opt.options}
+          question={opt.question}
+          onSelect={handleChipSelect}
+          selectedOptions={chipSelected ? [chipSelected] : []}
+          disabled={!!chipSelected || !isLatest}
+        />
+      ))}
 
       {/* Restaurant carousel */}
       {restaurantData && (

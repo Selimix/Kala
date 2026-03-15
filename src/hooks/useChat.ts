@@ -122,14 +122,14 @@ export function useChat() {
       };
 
       setMessages(prev => [assistantMessage, ...prev]);
-    } catch (error) {
-      console.error('Erreur envoi message:', error);
+    } catch (error: any) {
+      console.error('Erreur envoi message:', error?.message || error);
       const errorMessage: Message = {
         id: `error-${Date.now()}`,
         conversation_id: conversationIdRef.current!,
         user_id: '',
         role: 'assistant',
-        content: Strings.chat.error,
+        content: `${Strings.chat.error}\n\n(${error?.message || 'Erreur inconnue'})`,
         tool_calls: null,
         tool_results: null,
         event_id: null,

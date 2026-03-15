@@ -4,7 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { Colors } from '../constants/colors';
 
 export default function Index() {
-  const { session, profile, loading } = useAuth();
+  const { session, profile, loading, isPasswordRecovery } = useAuth();
 
   if (loading) {
     return (
@@ -12,6 +12,11 @@ export default function Index() {
         <ActivityIndicator size="large" color={Colors.primary} />
       </View>
     );
+  }
+
+  // Si l'utilisateur vient d'un lien de récupération de mot de passe
+  if (isPasswordRecovery && session) {
+    return <Redirect href={'/reset-password' as any} />;
   }
 
   if (!session) {

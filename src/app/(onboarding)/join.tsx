@@ -22,7 +22,7 @@ export default function JoinCalendarScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const { refreshCalendars } = useCalendar();
-  const { refreshProfile } = useAuth();
+  const { session, refreshProfile } = useAuth();
 
   // Format code input: auto-uppercase, add dash after KAL
   const handleCodeChange = (text: string) => {
@@ -33,6 +33,11 @@ export default function JoinCalendarScreen() {
 
   const handleJoin = async () => {
     if (!code.trim()) return;
+    if (!session) {
+      Alert.alert('Erreur', 'Vous devez être connecté pour rejoindre un calendrier. Veuillez vous reconnecter.');
+      router.replace('/(auth)/login');
+      return;
+    }
     setLoading(true);
     setError('');
     try {

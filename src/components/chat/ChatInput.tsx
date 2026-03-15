@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { View, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { useState, useEffect, useRef } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
 import { Strings } from '../../constants/strings.fr';
@@ -9,10 +9,22 @@ interface Props {
   disabled?: boolean;
   onMicPress?: () => void;
   isListening?: boolean;
+  editingText?: string | null;
+  onCancelEdit?: () => void;
 }
 
-export function ChatInput({ onSend, disabled, onMicPress, isListening }: Props) {
+export function ChatInput({ onSend, disabled, onMicPress, isListening, editingText, onCancelEdit }: Props) {
   const [text, setText] = useState('');
+  const inputRef = useRef<TextInput>(null);
+
+  // Pre-fill when editing a message
+  useEffect(() => {
+    if (editingText) {
+      setText(editingText);
+      // Focus the input
+      setTimeout(() => inputRef.current?.focus(), 100);
+    }
+  }, [editingText]);
 
   const handleSend = () => {
     if (!text.trim() || disabled) return;
@@ -20,51 +32,70 @@ export function ChatInput({ onSend, disabled, onMicPress, isListening }: Props) 
     setText('');
   };
 
+  const handleCancelEdit = () => {
+    setText('');
+    onCancelEdit?.();
+  };
+
   const hasText = text.trim().length > 0;
+  const isEditing = !!editingText;
 
   return (
-    <View style={styles.container}>
-      {/* Bouton micro — visible quand pas de texte */}
-      {!hasText && onMicPress && (
+    <View>
+      {/* Editing banner */}
+      {isEditing && (
+        <View style={styles.editBanner}>
+          <Ionicons name="pencil" size={14} color={Colors.authGold} />
+          <Text style={styles.editBannerText}>Modification du message</Text>
+          <TouchableOpacity onPress={handleCancelEdit} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Ionicons name="close-circle" size={20} color={Colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
+      )}
+      <View style={styles.container}>
+        {/* Bouton micro — visible quand pas de texte et pas en édition */}
+        {!hasText && !isEditing && onMicPress && (
+          <TouchableOpacity
+            style={[styles.micButton, isListening && styles.micButtonActive]}
+            onPress={onMicPress}
+            disabled={disabled}
+            activeOpacity={0.7}
+          >
+            <Ionicons
+              name={isListening ? 'mic' : 'mic-outline'}
+              size={26}
+              color={isListening ? '#fff' : Colors.authGold}
+            />
+          </TouchableOpacity>
+        )}
+
+        <TextInput
+          ref={inputRef}
+          style={[styles.input, isEditing && styles.inputEditing]}
+          placeholder={Strings.chat.placeholder}
+          placeholderTextColor={Colors.homeTextMuted}
+          value={text}
+          onChangeText={setText}
+          multiline
+          maxLength={500}
+          editable={!disabled}
+          onSubmitEditing={handleSend}
+          blurOnSubmit={false}
+        />
+
+        {/* Bouton envoyer */}
         <TouchableOpacity
-          style={[styles.micButton, isListening && styles.micButtonActive]}
-          onPress={onMicPress}
-          disabled={disabled}
-          activeOpacity={0.7}
+          style={[styles.sendButton, (!hasText || disabled) && styles.sendButtonDisabled]}
+          onPress={handleSend}
+          disabled={!hasText || disabled}
         >
           <Ionicons
-            name={isListening ? 'mic' : 'mic-outline'}
-            size={26}
-            color={isListening ? '#fff' : Colors.authGold}
+            name={isEditing ? 'checkmark' : 'send'}
+            size={24}
+            color={!hasText || disabled ? Colors.homeTextMuted : Colors.textOnPrimary}
           />
         </TouchableOpacity>
-      )}
-
-      <TextInput
-        style={styles.input}
-        placeholder={Strings.chat.placeholder}
-        placeholderTextColor={Colors.homeTextMuted}
-        value={text}
-        onChangeText={setText}
-        multiline
-        maxLength={500}
-        editable={!disabled}
-        onSubmitEditing={handleSend}
-        blurOnSubmit={false}
-      />
-
-      {/* Bouton envoyer — visible quand il y a du texte */}
-      <TouchableOpacity
-        style={[styles.sendButton, (!hasText || disabled) && styles.sendButtonDisabled]}
-        onPress={handleSend}
-        disabled={!hasText || disabled}
-      >
-        <Ionicons
-          name="send"
-          size={24}
-          color={!hasText || disabled ? Colors.homeTextMuted : Colors.textOnPrimary}
-        />
-      </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -80,6 +111,22 @@ const styles = StyleSheet.create({
     borderTopColor: Colors.homeInputBorder,
     gap: 8,
   },
+  editBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    backgroundColor: Colors.authGold + '15',
+    borderTopWidth: 1,
+    borderTopColor: Colors.authGold + '30',
+  },
+  editBannerText: {
+    flex: 1,
+    fontSize: 13,
+    color: Colors.authGold,
+    fontWeight: '600',
+  },
   input: {
     flex: 1,
     backgroundColor: Colors.homeInputBg,
@@ -91,6 +138,9 @@ const styles = StyleSheet.create({
     maxHeight: 100,
     borderWidth: 1,
     borderColor: Colors.homeInputBorder,
+  },
+  inputEditing: {
+    borderColor: Colors.authGold,
   },
   micButton: {
     width: 50,

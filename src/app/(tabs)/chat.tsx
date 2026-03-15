@@ -37,13 +37,19 @@ export default function ChatScreen() {
   const { location } = useLocation();
   const [isListening, setIsListening] = useState(false);
   const [historyVisible, setHistoryVisible] = useState(false);
+  const [editingText, setEditingText] = useState<string | null>(null);
 
   const handleSend = useCallback(
     async (text: string) => {
+      setEditingText(null);
       await sendMessage(text, location);
     },
     [sendMessage, location]
   );
+
+  const handleEditMessage = useCallback((message: Message) => {
+    setEditingText(message.content);
+  }, []);
 
   const handleMicPress = () => {
     setIsListening(prev => !prev);
@@ -51,8 +57,15 @@ export default function ChatScreen() {
   };
 
   const renderMessage = useCallback(
-    ({ item }: { item: Message }) => <MessageBubble message={item} onSendMessage={sendMessage} />,
-    [sendMessage]
+    ({ item, index }: { item: Message; index: number }) => (
+      <MessageBubble
+        message={item}
+        onSendMessage={handleSend}
+        onEditMessage={handleEditMessage}
+        isLatest={index === 0}
+      />
+    ),
+    [handleSend, handleEditMessage]
   );
 
   const keyExtractor = useCallback((item: Message) => item.id, []);
@@ -142,6 +155,8 @@ export default function ChatScreen() {
           disabled={sending}
           onMicPress={handleMicPress}
           isListening={isListening}
+          editingText={editingText}
+          onCancelEdit={() => setEditingText(null)}
         />
       </KeyboardAvoidingView>
 

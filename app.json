@@ -17,7 +17,10 @@
       "bundleIdentifier": "com.kala.app",
       "infoPlist": {
         "NSCalendarsUsageDescription": "Kāla a besoin d'accéder à votre calendrier pour y synchroniser vos événements.",
-        "NSLocationWhenInUseUsageDescription": "Kāla utilise votre position pour trouver des lieux proches de vous."
+        "NSLocationWhenInUseUsageDescription": "Kāla utilise votre position pour trouver des lieux proches de vous.",
+        "NSFaceIDUsageDescription": "Kāla utilise Face ID pour vous connecter rapidement.",
+        "NSContactsUsageDescription": "Kāla accède à vos contacts pour vous aider à organiser des événements avec vos proches.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -27,7 +30,15 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "package": "com.kala.app"
+      "package": "com.kala.app",
+      "permissions": [
+        "android.permission.READ_CALENDAR",
+        "android.permission.WRITE_CALENDAR",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -53,6 +64,18 @@
         }
       ],
       [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Kāla utilise Face ID pour vous connecter rapidement."
+        }
+      ],
+      [
+        "expo-contacts",
+        {
+          "contactsPermission": "Kāla accède à vos contacts pour vous aider à organiser des événements avec vos proches."
+        }
+      ],
+      [
         "expo-location",
         {
           "locationWhenInUsePermission": "Kāla utilise votre position pour trouver des lieux proches de vous.",
@@ -63,6 +86,14 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "root": "./src/app"
+      },
+      "eas": {
+        "projectId": "ff9bb3a8-b62f-49a2-a23d-b838051b2b5f"
+      }
     }
   }
 }

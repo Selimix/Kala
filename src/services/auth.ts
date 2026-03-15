@@ -14,6 +14,16 @@ export async function signUp(email: string, password: string, displayName: strin
   });
 }
 
+export async function resetPassword(email: string) {
+  return supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: 'kala://reset-password',
+  });
+}
+
+export async function updatePassword(newPassword: string) {
+  return supabase.auth.updateUser({ password: newPassword });
+}
+
 export async function signOut() {
   return supabase.auth.signOut();
 }

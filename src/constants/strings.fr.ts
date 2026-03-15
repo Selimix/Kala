@@ -19,6 +19,14 @@ export const Strings = {
     passwordMismatch: 'Les mots de passe ne correspondent pas',
     invitationCode: 'Code d\'invitation',
     invalidInvitationCode: 'Code d\'invitation invalide',
+    emailConfirmationTitle: 'Vérifiez votre email',
+    emailConfirmationMessage: 'Un email de confirmation a été envoyé à votre adresse. Cliquez sur le lien pour activer votre compte, puis connectez-vous.',
+    forgotPassword: 'Mot de passe oublié ?',
+    resetPasswordTitle: 'Réinitialiser le mot de passe',
+    resetPasswordMessage: 'Entrez votre adresse email pour recevoir un lien de réinitialisation.',
+    resetPasswordSent: 'Email envoyé !',
+    resetPasswordSentMessage: 'Si un compte existe avec cette adresse, vous recevrez un email avec un lien pour réinitialiser votre mot de passe.',
+    resetPasswordError: 'Impossible d\'envoyer l\'email. Vérifiez votre adresse.',
   },
 
   tabs: {

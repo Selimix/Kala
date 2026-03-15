@@ -12,6 +12,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { Link, router } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { signUp } from '../../services/auth';
 import { Colors } from '../../constants/colors';
 import { Strings } from '../../constants/strings.fr';
@@ -24,13 +25,24 @@ export default function RegisterScreen() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [invitationCode, setInvitationCode] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleRegister = async () => {
-    if (!displayName || !email || !password || !confirmPassword || !invitationCode) return;
+    if (!displayName || !email || !password || !confirmPassword) {
+      Alert.alert('Erreur', 'Veuillez remplir tous les champs obligatoires.');
+      return;
+    }
 
-    if (!VALID_INVITATION_CODES.includes(invitationCode.trim().toUpperCase())) {
+    // Code d'invitation optionnel mais s'il est renseigné, il doit être valide
+    if (invitationCode.trim() && !VALID_INVITATION_CODES.includes(invitationCode.trim().toUpperCase())) {
       Alert.alert('Erreur', Strings.auth.invalidInvitationCode);
+      return;
+    }
+
+    if (password.length < 6) {
+      Alert.alert('Erreur', 'Le mot de passe doit contenir au moins 6 caractères.');
       return;
     }
 
@@ -41,9 +53,16 @@ export default function RegisterScreen() {
 
     setLoading(true);
     try {
-      const { error } = await signUp(email, password, displayName);
+      const { data, error } = await signUp(email, password, displayName);
       if (error) {
         Alert.alert('Erreur', Strings.auth.registerError);
+      } else if (!data.session) {
+        // Supabase email confirmation is enabled — no session until confirmed
+        Alert.alert(
+          Strings.auth.emailConfirmationTitle,
+          Strings.auth.emailConfirmationMessage,
+          [{ text: 'OK', onPress: () => router.replace('/(auth)/login') }]
+        );
       } else {
         router.replace('/(onboarding)' as any);
       }
@@ -77,7 +96,7 @@ export default function RegisterScreen() {
           <View style={styles.form}>
             <TextInput
               style={styles.input}
-              placeholder={Strings.auth.invitationCode}
+              placeholder={`${Strings.auth.invitationCode} (optionnel)`}
               placeholderTextColor={Colors.textLight}
               value={invitationCode}
               onChangeText={setInvitationCode}
@@ -103,24 +122,50 @@ export default function RegisterScreen() {
               keyboardType="email-address"
               textContentType="emailAddress"
             />
-            <TextInput
-              style={styles.input}
-              placeholder={Strings.auth.password}
-              placeholderTextColor={Colors.textLight}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              textContentType="newPassword"
-            />
-            <TextInput
-              style={styles.input}
-              placeholder={Strings.auth.confirmPassword}
-              placeholderTextColor={Colors.textLight}
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              secureTextEntry
-              textContentType="newPassword"
-            />
+            <View style={styles.passwordContainer}>
+              <TextInput
+                style={styles.passwordInput}
+                placeholder={Strings.auth.password}
+                placeholderTextColor={Colors.textLight}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                textContentType="newPassword"
+              />
+              <TouchableOpacity
+                style={styles.eyeButton}
+                onPress={() => setShowPassword(prev => !prev)}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Ionicons
+                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                  size={22}
+                  color={Colors.textSecondary}
+                />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.passwordContainer}>
+              <TextInput
+                style={styles.passwordInput}
+                placeholder={Strings.auth.confirmPassword}
+                placeholderTextColor={Colors.textLight}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                secureTextEntry={!showConfirmPassword}
+                textContentType="newPassword"
+              />
+              <TouchableOpacity
+                style={styles.eyeButton}
+                onPress={() => setShowConfirmPassword(prev => !prev)}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Ionicons
+                  name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
+                  size={22}
+                  color={Colors.textSecondary}
+                />
+              </TouchableOpacity>
+            </View>
 
             <TouchableOpacity
               style={[styles.button, loading && styles.buttonDisabled]}
@@ -198,6 +243,25 @@ const styles = StyleSheet.create({
     color: Colors.text,
     borderWidth: 1,
     borderColor: Colors.border,
+  },
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  passwordInput: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+    color: Colors.text,
+  },
+  eyeButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 14,
   },
   button: {
     backgroundColor: Colors.authGold,

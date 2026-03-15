@@ -93,34 +93,40 @@ Ton rôle:
 - Reformuler les événements et tâches de manière claire dans ta réponse
 - Donner des récapitulatifs quand on te le demande
 
-CONVERSATION GUIDÉE — Pour les événements sociaux (dîner, déjeuner, sortie, apéro, etc.) :
-NE PAS créer l'événement immédiatement. Guide la conversation étape par étape :
-1. HORAIRES : Propose 3 créneaux adaptés au type d'activité (ex: "19h, 20h ou 21h ?"). Adapte selon le type : déjeuner → 12h/12h30/13h, dîner → 19h/20h/21h, apéro → 18h/18h30/19h.
-2. LIEU : Propose d'abord les lieux favoris de l'utilisateur (triés par fréquence + note). Affiche la note moyenne (⭐) et le nombre de visites. Si aucun favori pertinent ou si l'utilisateur veut découvrir, utilise search_restaurants pour trouver de nouvelles options.
-3. DURÉE : Demande la durée approximative. Propose un défaut raisonnable (dîner → 2h, déjeuner → 1h30, apéro → 1h30).
-4. CONTACTS : Vérifie que le contact mentionné a un numéro de téléphone. Si non, demande-le.
-5. SMS : Après confirmation de tous les détails, propose d'envoyer un SMS au contact avec propose_sms. Le message doit être amical et inclure date/heure, lieu, et une formule sympa.
-6. CRÉATION : N'appelle create_event qu'après confirmation de tous les détails par l'utilisateur.
+PHILOSOPHIE — AGIR D'ABORD, QUESTIONS INTERACTIVES ENSUITE :
+Tu es un assistant EFFICACE et FLUIDE. Quand l'utilisateur demande quelque chose, AGIS immédiatement avec les infos disponibles.
 
-Pour les événements non-sociaux (réunion, rdv médical, sport, etc.) :
-NE PAS créer directement non plus. Sois TOUJOURS proactif et pose des questions pour compléter les informations :
-1. LIEU PRÉCIS : Si l'utilisateur dit "à côté de République" ou un quartier/zone vague, demande l'adresse exacte ou le nom du lieu (salle de sport, parc, etc.). Un quartier n'est PAS un lieu valide.
-2. ACCOMPAGNEMENT : Demande si l'utilisateur sera seul ou accompagné ("Tu y vas seul(e) ou avec quelqu'un ?").
-3. HORAIRES : Si l'heure n'est pas précisée, propose 2-3 créneaux adaptés.
-4. DURÉE : Si pas précisée, propose un défaut et demande confirmation.
-5. RÉCURRENCE : Demande si c'est ponctuel ou récurrent ("C'est une séance régulière ou juste cette fois ?").
-6. CRÉATION : N'appelle create_event qu'après avoir toutes les informations précises.
+OUTIL PRESENT_OPTIONS — CRITIQUE, UTILISE-LE SYSTÉMATIQUEMENT :
+À CHAQUE FOIS que tu poses une question ou proposes des choix, tu DOIS appeler present_options EN PLUS de ton texte.
+C'est un outil qui affiche des boutons cliquables dans l'interface. L'utilisateur peut taper directement sur un bouton au lieu de taper du texte.
 
-RÈGLE D'OR — TOUJOURS POSER AU MOINS UNE QUESTION :
-Même si l'utilisateur donne beaucoup d'infos, trouve toujours quelque chose à demander ou suggérer :
-- "Tu veux que je te rappelle de prendre tes affaires de sport ?"
-- "Tu préfères un créneau le matin ou l'après-midi ?"
-- "Tu veux que je cherche une salle de sport dans ce quartier ?"
-- "Il y a d'autres choses à organiser cette semaine ?"
-- "Un de ces restos te tente ? Tu veux plus de détails ?"
-- "Tu veux que je réserve une table ou que je crée un événement ?"
-L'objectif est d'être un vrai assistant proactif qui anticipe les besoins.
-NE JAMAIS se contenter de lister des résultats sans commentaire ni question de suivi.
+Tu DOIS appeler present_options dans ces situations :
+- Choix d'horaire → options: [{label:"9h"}, {label:"10h"}, {label:"11h"}]
+- Confirmation oui/non → options: [{label:"Oui ✓"}, {label:"Non, modifier"}]
+- Choix de contact (plusieurs résultats) → options: [{label:"Agnès Dupont"}, {label:"Agnès Martin"}]
+- Type de cuisine → options: [{label:"Italien"}, {label:"Japonais"}, {label:"Français"}]
+- Durée → options: [{label:"30 min"}, {label:"1h"}, {label:"1h30"}, {label:"2h"}]
+- Suivi après action → options: [{label:"Prévenir par SMS"}, {label:"C'est tout, merci"}]
+- Choix de restaurant → options avec les noms des restos trouvés
+
+RÈGLE : Si ta réponse contient une question → appelle present_options. Pas d'exception.
+
+Pour les événements :
+- Si date, heure et titre sont donnés → crée l'événement directement.
+- S'il manque juste l'heure → propose des créneaux via present_options et crée quand l'utilisateur choisit.
+- S'il manque des infos critiques → demande avec present_options quand possible.
+- Après création → present_options avec ["Prévenir quelqu'un par SMS ?", "C'est tout, merci"]
+
+Pour les recherches de lieux/restaurants :
+- Si l'utilisateur mentionne un type de cuisine → lance search_restaurants IMMÉDIATEMENT.
+- Si la position GPS est disponible → utilise-la directement, NE PAS demander le quartier.
+- Après résultats → present_options avec les noms des restaurants trouvés pour choix rapide.
+
+Ce qu'il faut ÉVITER :
+- Poser 3-4 questions TEXTE avant d'agir
+- Demander le quartier quand on a le GPS
+- Lister des options en texte au lieu d'utiliser present_options
+- Refuser d'agir parce qu'il "manque" des détails non essentiels
 
 COMPRÉHENSION DU CONTEXTE CONVERSATIONNEL (CRITIQUE) :
 - Quand l'utilisateur dit "il y en a", "où en trouver", "lesquels sont ouverts", le pronom "en" se réfère TOUJOURS au sujet de la conversation en cours, PAS aux restaurants par défaut.
@@ -156,11 +162,13 @@ Types d'activité — déduis automatiquement du contexte:
 - "pause/sieste/repos" → pause
 - Tout le reste → autre
 
-Lieux et contacts:
-- Utilise place_name et people_names dans create_event — le système résout automatiquement vers des entités existantes ou en crée de nouvelles.
+Lieux et contacts — RÉSOLUTION OBLIGATOIRE :
+- Quand l'utilisateur mentionne un prénom ou un nom → appelle TOUJOURS search_personas AVANT de créer l'événement.
+- Si plusieurs résultats (ex: "Agnès Dupont" et "Agnès Martin") → utilise present_options pour laisser l'utilisateur choisir.
+- Si un seul résultat → utilise ce contact directement (avec son nom complet).
+- Si aucun résultat → crée le contact et demande les infos manquantes (téléphone, relation).
+- Même logique pour les lieux : search_places avant de créer.
 - Les lieux et contacts sont partagés au niveau du calendrier actif.
-- Utilise search_places / search_personas si tu veux vérifier l'existence avant de créer.
-- Utilise create_place / create_persona pour créer explicitement un lieu ou un contact.
 
 Avis et suggestions de lieux:
 - Quand l'utilisateur donne un avis sur un lieu ("c'était bien/nul/moyen"), utilise rate_place avec la note appropriée
@@ -168,25 +176,12 @@ Avis et suggestions de lieux:
 - Si l'utilisateur demande un endroit nouveau ou veut changer, utilise search_restaurants
 - Pour la recherche, combine les résultats internes (favoris) et Foursquare Places
 
-RECHERCHE DE RESTAURANTS — Conversation guidée :
-Quand l'utilisateur cherche un restaurant ou un lieu pour manger/boire, sois TOUJOURS proactif :
-1. CLARIFICATION AVANT RECHERCHE : Si l'utilisateur ne précise pas, demande AVANT de lancer la recherche :
-   - Type de cuisine : "Tu cherches quel type de cuisine ? Italien, japonais, français... ?"
-   - Occasion : "C'est pour un dîner en amoureux, entre amis, un déjeuner rapide ?"
-   - Budget : "Tu as un budget en tête ? Plutôt resto abordable ou gastronomique ?"
-   Exception : Si l'utilisateur a déjà précisé ces infos dans la conversation (ex: "cherche un italien"), lance la recherche directement.
-2. PRÉSENTATION DES RÉSULTATS : Après la recherche, ne fais PAS une simple liste. Pour chaque restaurant :
-   - Mentionne la catégorie/type de cuisine
-   - Mentionne l'adresse
-   - Si les données sont disponibles, mentionne la note et le prix
-   - Ajoute un petit commentaire personnalisé ("Très bien noté !", "Bonne option pour un budget serré")
-3. QUESTIONS DE SUIVI (OBLIGATOIRES) : Après avoir présenté les résultats, pose TOUJOURS une question :
-   - "Un de ces restaurants te tente ? Tu veux plus de détails sur l'un d'eux ?"
-   - "Tu veux que je cherche dans un autre quartier ou un autre type de cuisine ?"
-   - "Tu veux que je réserve / crée un événement pour y aller ?"
-4. CONTEXTE CONVERSATIONNEL : Si la recherche fait suite à une demande de planification d'événement, relie les résultats au contexte :
-   - "Pour ton dîner avec Marie vendredi, voici ce que j'ai trouvé..."
-   - Propose de créer l'événement avec le restaurant choisi
+RECHERCHE DE RESTAURANTS :
+Quand l'utilisateur cherche un restaurant → lance search_restaurants IMMÉDIATEMENT avec les infos disponibles.
+- Si un type de cuisine est mentionné → utilise-le comme query
+- Si le GPS est dispo → les résultats seront automatiquement proches de l'utilisateur
+- Présente les résultats de façon claire : nom, type, adresse, note si disponible
+- Termine par UNE question de suivi : "Un de ceux-là te tente ?" ou "Tu veux que je crée un événement ?"
 
 Tâches:
 - Quand l'utilisateur mentionne quelque chose à faire, un todo, ou une tâche, utilise create_task
@@ -500,6 +495,36 @@ const TOOLS_ANTHROPIC = [
         phone: { type: 'string', description: 'Numéro de téléphone si connu' },
       },
       required: ['persona_name', 'message'],
+    },
+  },
+  // ── UI: Suggestion chips ──
+  {
+    name: 'present_options',
+    description:
+      "Affiche des boutons/chips cliquables à l'utilisateur pour un choix rapide. " +
+      "Utilise cet outil SYSTÉMATIQUEMENT quand tu proposes des options (horaires, lieux, oui/non, etc.). " +
+      "L'utilisateur pourra cliquer directement au lieu de taper.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        question: {
+          type: 'string',
+          description: 'Question courte affichée au-dessus des options',
+        },
+        options: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              label: { type: 'string', description: "Texte du bouton (court: '9h', '10h', 'Oui', 'Non', etc.)" },
+              icon: { type: 'string', description: "Nom d'icône Ionicons optionnel (ex: 'time-outline', 'restaurant-outline', 'checkmark-circle')" },
+            },
+            required: ['label'],
+          },
+          description: 'Liste des options cliquables (2-6 options)',
+        },
+      },
+      required: ['options'],
     },
   },
 ];
@@ -1287,6 +1312,19 @@ async function executeTool(
       };
     }
 
+    case 'present_options': {
+      // Cet outil ne fait rien côté serveur — les options sont rendues côté client
+      // via tool_calls dans la réponse
+      return {
+        result: JSON.stringify({
+          success: true,
+          displayed: true,
+          options: toolInput.options,
+          question: toolInput.question || null,
+        }),
+      };
+    }
+
     default:
       return { result: JSON.stringify({ error: 'Outil inconnu' }) };
   }
@@ -1761,7 +1799,34 @@ Deno.serve(async (req: Request) => {
       .order('created_at', { ascending: true })
       .limit(20);
 
-    // Save user message
+    // Build messages — merge consecutive same-role messages to avoid API errors
+    // (can happen if a previous request failed after saving user msg but before saving assistant response)
+    const messages: Array<{ role: string; content: any }> = [];
+    if (history) {
+      for (const msg of history) {
+        const last = messages[messages.length - 1];
+        if (last && last.role === msg.role) {
+          // Merge consecutive same-role messages
+          last.content = last.content + '\n' + msg.content;
+        } else {
+          messages.push({ role: msg.role, content: msg.content });
+        }
+      }
+    }
+    // Add current user message — merge if last history msg was also user
+    const lastMsg = messages[messages.length - 1];
+    if (lastMsg && lastMsg.role === 'user') {
+      lastMsg.content = lastMsg.content + '\n' + user_message;
+    } else {
+      messages.push({ role: 'user', content: user_message });
+    }
+
+    // Ensure first message is from user (required by Anthropic API)
+    if (messages.length > 0 && messages[0].role !== 'user') {
+      messages.shift();
+    }
+
+    // Save user message to DB
     await supabaseUser.from('messages').insert({
       conversation_id,
       user_id: user.id,
@@ -1769,17 +1834,10 @@ Deno.serve(async (req: Request) => {
       content: user_message,
     });
 
-    // Build messages
-    const messages: Array<{ role: string; content: any }> = [];
-    if (history) {
-      for (const msg of history) {
-        messages.push({ role: msg.role, content: msg.content });
-      }
-    }
-    messages.push({ role: 'user', content: user_message });
-
     // Call the selected AI provider
-    let result: { assistantMessage: string; toolCalls: any[]; eventsAffected: string[]; tasksAffected: string[] };
+    let result: { assistantMessage: string; toolCalls: any[]; allToolResults: any[]; eventsAffected: string[]; tasksAffected: string[] };
+
+    console.log(`[chat-agent] Calling ${aiProvider} with ${messages.length} messages`);
 
     switch (aiProvider) {
       case 'openai':
@@ -1795,17 +1853,21 @@ Deno.serve(async (req: Request) => {
     }
 
     // Save assistant message
-    const { data: savedMessage } = await supabaseUser.from('messages').insert({
+    const { data: savedMessage, error: saveError } = await supabaseUser.from('messages').insert({
       conversation_id,
       user_id: user.id,
       role: 'assistant',
       content: result.assistantMessage,
       tool_calls: result.toolCalls.length > 0 ? result.toolCalls : null,
-      tool_results: result.allToolResults.length > 0 ? result.allToolResults : null,
+      tool_results: result.allToolResults?.length > 0 ? result.allToolResults : null,
       event_id: result.eventsAffected[0] || null,
     }).select().single();
 
-    // Update conversation timestamp
+    if (saveError) {
+      console.warn('[chat-agent] Failed to save assistant message:', saveError.message);
+    }
+
+    // Update conversation timestamp (ignore errors — missing UPDATE policy is non-critical)
     await supabaseUser
       .from('conversations')
       .update({ updated_at: new Date().toISOString() })
@@ -1815,7 +1877,7 @@ Deno.serve(async (req: Request) => {
       JSON.stringify({
         assistant_message: result.assistantMessage,
         tool_calls: result.toolCalls.length > 0 ? result.toolCalls : null,
-        tool_results: result.allToolResults.length > 0 ? result.allToolResults : null,
+        tool_results: result.allToolResults?.length > 0 ? result.allToolResults : null,
         events_affected: result.eventsAffected,
         tasks_affected: result.tasksAffected,
         conversation_id,
@@ -1824,9 +1886,9 @@ Deno.serve(async (req: Request) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (err: any) {
-    console.error('Edge Function error:', err);
+    console.error('[chat-agent] Edge Function error:', err?.message, err?.status, err?.error);
     return new Response(
-      JSON.stringify({ error: err.message || 'Erreur interne' }),
+      JSON.stringify({ error: err.message || 'Erreur interne', details: err?.status || '' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

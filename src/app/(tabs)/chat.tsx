@@ -34,7 +34,7 @@ export default function ChatScreen() {
     switchConversation,
     startNewConversation,
   } = useChat();
-  const { location } = useLocation();
+  const { location, refreshLocation } = useLocation();
   const [isListening, setIsListening] = useState(false);
   const [historyVisible, setHistoryVisible] = useState(false);
   const [editingText, setEditingText] = useState<string | null>(null);
@@ -42,9 +42,11 @@ export default function ChatScreen() {
   const handleSend = useCallback(
     async (text: string) => {
       setEditingText(null);
-      await sendMessage(text, location);
+      // S'assurer que la géoloc est fraîche avant d'envoyer
+      const freshLocation = await refreshLocation() || location;
+      await sendMessage(text, freshLocation);
     },
-    [sendMessage, location]
+    [sendMessage, location, refreshLocation]
   );
 
   const handleEditMessage = useCallback((message: Message) => {

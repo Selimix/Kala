@@ -1,21 +1,25 @@
+import { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Linking, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
 import { Strings } from '../../constants/strings.fr';
+import { ContactLookupCard } from './ContactLookupCard';
 import type { ToolCall } from '../../types/chat';
 
 interface Props {
   toolCall: ToolCall;
+  onSendMessage?: (text: string) => void;
 }
 
-export function SmsProposalCard({ toolCall }: Props) {
+export function SmsProposalCard({ toolCall, onSendMessage }: Props) {
   const input = toolCall.input as {
     persona_name?: string;
     phone?: string;
     message?: string;
   };
 
-  const phone = input.phone;
+  const [resolvedPhone, setResolvedPhone] = useState<string | null>(null);
+  const phone = input.phone || resolvedPhone;
   const message = input.message || '';
   const name = input.persona_name || 'Contact';
 
@@ -30,6 +34,12 @@ export function SmsProposalCard({ toolCall }: Props) {
     Linking.openURL(smsUrl);
   };
 
+  const handleContactFound = (contactName: string, contactPhone: string) => {
+    setResolvedPhone(contactPhone);
+    // Informer l'IA pour qu'elle enregistre le numéro dans les personas
+    onSendMessage?.(`Le numéro de ${contactName} est ${contactPhone}`);
+  };
+
   if (!phone) {
     return (
       <View style={[styles.card, { borderLeftColor: Colors.textLight }]}>
@@ -38,6 +48,7 @@ export function SmsProposalCard({ toolCall }: Props) {
           <Text style={styles.label}>{Strings.smartAssistant.noPhoneNumber}</Text>
         </View>
         <Text style={styles.name}>{name}</Text>
+        <ContactLookupCard personaName={name} onContactFound={handleContactFound} />
       </View>
     );
   }

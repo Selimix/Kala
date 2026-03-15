@@ -111,8 +111,23 @@ Tu DOIS appeler present_options dans ces situations :
 
 RÈGLE : Si ta réponse contient une question → appelle present_options. Pas d'exception.
 
+VÉRIFICATION DE CONFLITS — OBLIGATOIRE :
+AVANT de créer un événement avec create_event, tu DOIS TOUJOURS appeler check_conflicts avec le créneau prévu.
+- Si aucun conflit → procède avec create_event normalement.
+- Si conflit détecté → INFORME l'utilisateur du conflit et propose des alternatives via present_options :
+  * "Décaler [événement existant]"
+  * "Créer quand même (chevauchement)"
+  * "Choisir un autre créneau"
+- Ne crée JAMAIS un événement sans avoir vérifié les conflits d'abord.
+- Si l'utilisateur choisit de DÉCALER un événement existant (suite à un conflit) :
+  1. Modifie l'événement avec update_event
+  2. Vérifie s'il y a des participants (people_names) sur l'événement décalé
+  3. Si oui → propose AUTOMATIQUEMENT de les prévenir par SMS via propose_sms pour chaque participant
+  4. Utilise present_options : ["Prévenir les participants", "Ne pas prévenir", "Prévenir seulement [nom]"]
+  5. Le SMS doit mentionner le nouveau créneau et être formulé poliment ("Suite à un changement de programme, notre [événement] est décalé à [nouvel horaire]")
+
 Pour les événements :
-- Si date, heure et titre sont donnés → crée l'événement directement.
+- Si date, heure et titre sont donnés → check_conflicts PUIS crée l'événement.
 - S'il manque juste l'heure → propose des créneaux via present_options et crée quand l'utilisateur choisit.
 - S'il manque des infos critiques → demande avec present_options quand possible.
 - Après création → present_options avec ["Prévenir quelqu'un par SMS ?", "C'est tout, merci"]
@@ -483,6 +498,23 @@ const TOOLS_ANTHROPIC = [
       required: ['query'],
     },
   },
+  // ── Vérification de conflits ──
+  {
+    name: 'check_conflicts',
+    description:
+      "Vérifie s'il y a des conflits avec des événements existants sur un créneau donné. " +
+      "OBLIGATOIRE : appelle cet outil AVANT create_event pour vérifier les chevauchements. " +
+      "Si des conflits sont détectés, propose des alternatives via present_options.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        start_time: { type: 'string', description: 'Date/heure début ISO 8601 du créneau à vérifier' },
+        end_time: { type: 'string', description: 'Date/heure fin ISO 8601 du créneau à vérifier' },
+        exclude_event_id: { type: 'string', description: "UUID d'un événement à exclure (pour les mises à jour)" },
+      },
+      required: ['start_time', 'end_time'],
+    },
+  },
   // ── Proposition SMS ──
   {
     name: 'propose_sms',
@@ -690,6 +722,54 @@ async function executeTool(
   userLocation?: { latitude: number; longitude: number } | null
 ): Promise<{ result: string; eventId?: string; taskId?: string }> {
   switch (toolName) {
+    // ── Vérification de conflits ──
+    case 'check_conflicts': {
+      let query = supabaseUser
+        .from('events')
+        .select('id, title, start_time, end_time, activity_type, location')
+        .lt('start_time', toolInput.end_time)
+        .gt('end_time', toolInput.start_time);
+
+      if (calendarId) {
+        query = query.eq('calendar_id', calendarId);
+      } else {
+        query = query.eq('user_id', userId);
+      }
+
+      if (toolInput.exclude_event_id) {
+        query = query.neq('id', toolInput.exclude_event_id);
+      }
+
+      const { data: conflicts, error } = await query.order('start_time');
+      if (error) throw error;
+
+      if (!conflicts || conflicts.length === 0) {
+        return {
+          result: JSON.stringify({
+            has_conflicts: false,
+            message: 'Aucun conflit — le créneau est libre.',
+          }),
+        };
+      }
+
+      const conflictList = conflicts.map((e: any) => ({
+        event_id: e.id,
+        title: e.title,
+        start_time: e.start_time,
+        end_time: e.end_time,
+        activity_type: e.activity_type,
+        location: e.location,
+      }));
+
+      return {
+        result: JSON.stringify({
+          has_conflicts: true,
+          conflicts: conflictList,
+          message: `${conflicts.length} événement(s) en conflit sur ce créneau.`,
+        }),
+      };
+    }
+
     // ── Events ──
     case 'create_event': {
       // Resolve place

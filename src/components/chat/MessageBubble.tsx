@@ -172,7 +172,7 @@ export function MessageBubble({ message, onSendMessage, onEditMessage, isLatest 
         message.tool_calls
           ?.filter(tc => SMS_TOOL_NAMES.includes(tc.name))
           .map(tc => (
-            <SmsProposalCard key={tc.id} toolCall={tc} />
+            <SmsProposalCard key={tc.id} toolCall={tc} onSendMessage={onSendMessage} />
           ))}
 
       {/* Suggestion chips — interactive options */}
